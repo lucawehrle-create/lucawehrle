@@ -1,0 +1,107 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--space-2xl) var(--space-lg);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  text-align: center;
+  margin-bottom: var(--space-sm);
+}
+
+.subtitle {
+  text-align: center;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-xl);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-lg);
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--color-text);
+}
+
+.card:hover {
+  border-color: var(--mood-primary);
+  box-shadow: 0 4px 20px var(--mood-glow);
+  transform: translateY(-4px);
+}
+
+.avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--mood-primary);
+}
+
+.avatarIcon {
+  font-size: 1.8rem;
+}
+
+.charName {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+}
+
+.charInfo {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  text-transform: capitalize;
+}
+
+.charLevel {
+  color: var(--mood-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.stats {
+  display: flex;
+  gap: var(--space-md);
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.createCard {
+  composes: card;
+  border-style: dashed;
+  border-color: var(--color-border);
+}
+
+.createCard:hover {
+  border-style: solid;
+}
+
+.createIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--color-surface-alt);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: var(--mood-primary);
+  border: 2px dashed var(--color-border);
+}

@@ -1,10 +1,9 @@
+import "dotenv/config";
 import { createApp } from "./app.js";
 
-const PORT = process.env.PORT ?? 4000;
+const { app, config } = createApp();
 
-const { app } = createApp();
-
-app.listen(PORT, () => {
-  console.log(`[Aetheria AI] Server running on http://localhost:${PORT}`);
-  console.log(`[Aetheria AI] Health: http://localhost:${PORT}/api/health`);
+app.listen(config.port, () => {
+  console.log(`[Aetheria AI] Server laeuft auf http://localhost:${config.port}`);
+  console.log(`[Aetheria AI] Health: http://localhost:${config.port}/api/health`);
 });

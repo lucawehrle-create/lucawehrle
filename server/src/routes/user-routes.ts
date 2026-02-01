@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import type { GameStore } from "../store/game-store.js";
 import type { EnergyService } from "../services/energy/energy-service.js";
+import type { AIService } from "../services/ai/ai-service.js";
 import type {
   ApiResponse,
   User,
@@ -19,7 +20,8 @@ import type { CharacterRace, CharacterClass } from "@aetheria/shared";
 
 export function createUserRoutes(
   store: GameStore,
-  energyService: EnergyService
+  energyService: EnergyService,
+  aiService: AIService
 ): Router {
   const router = Router();
 
@@ -155,6 +157,28 @@ export function createUserRoutes(
     };
 
     store.createCharacter(character);
+
+    // Generate character portrait asynchronously
+    const appearanceDesc = [
+      `${character.appearance.hairColor} ${character.appearance.hairStyle} hair`,
+      `${character.appearance.eyeColor} eyes`,
+      `${character.appearance.skinTone} skin`,
+      `${character.appearance.height} height, ${character.appearance.build} build`,
+      character.appearance.clothing,
+      ...character.appearance.distinguishingFeatures,
+    ].filter(Boolean).join(", ");
+
+    aiService
+      .generatePortrait(appearanceDesc, character.race, character.characterClass)
+      .then((portraitUrl) => {
+        if (portraitUrl) {
+          character.portraitUrl = portraitUrl;
+          store.updateCharacter(character);
+        }
+      })
+      .catch(() => {
+        // Portrait generation failure is non-blocking
+      });
 
     const response: ApiResponse<Character> = { success: true, data: character };
     res.status(201).json(response);

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { useGame } from "../context/GameContext.js";
 import type { ItemNotification } from "../context/GameContext.js";
 import { submitAction, scanObject } from "../services/api.js";
+import { useSceneImage } from "../hooks/useImagePolling.js";
 import type { GameTurn, ActionOption } from "@aetheria/shared";
 import { DiceRollDisplay } from "./DiceRollDisplay.js";
 import { InventoryPanel } from "./InventoryPanel.js";
@@ -198,7 +199,12 @@ export function GameView() {
         {/* Narrative scroll */}
         <div className={styles.narrativeScroll}>
           {state.turns.map((turn, index) => (
-            <TurnDisplay key={turn.id} turn={turn} isLatest={index === state.turns.length - 1} />
+            <TurnDisplay
+              key={turn.id}
+              turn={turn}
+              isLatest={index === state.turns.length - 1}
+              sessionId={state.session?.id}
+            />
           ))}
           <div ref={narrativeEndRef} />
         </div>
@@ -321,13 +327,35 @@ function ItemNotificationToast({
   );
 }
 
-function TurnDisplay({ turn, isLatest }: { turn: GameTurn; isLatest: boolean }) {
-  // Split narrative into paragraphs for better readability
+function TurnDisplay({
+  turn,
+  isLatest,
+  sessionId,
+}: {
+  turn: GameTurn;
+  isLatest: boolean;
+  sessionId: string | undefined;
+}) {
   const paragraphs = turn.narrative.split(/\n\n+/).filter(Boolean);
+  const { imageUrl, isLoading: imageLoading } = useSceneImage(
+    sessionId,
+    turn.id,
+    turn.imageUrl,
+  );
+  const [imageRevealed, setImageRevealed] = useState(!!turn.imageUrl);
+
+  // Trigger cinematic reveal when image loads
+  useEffect(() => {
+    if (imageUrl && !imageRevealed) {
+      // Small delay for smoother experience
+      const timer = setTimeout(() => setImageRevealed(true), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [imageUrl, imageRevealed]);
 
   return (
     <div className={`${styles.turn} ${isLatest ? styles.latestTurn : ""}`}>
-      {/* Player action (if not the first turn) */}
+      {/* Player action */}
       {turn.playerAction && (
         <div className={styles.playerAction}>
           <span className={styles.playerLabel}>{"\u2694\uFE0F"} Du:</span> {turn.playerAction.text}
@@ -343,7 +371,7 @@ function TurnDisplay({ turn, isLatest }: { turn: GameTurn; isLatest: boolean }) 
         </div>
       )}
 
-      {/* Narrative text - typewriter for latest turn, paragraphs for older */}
+      {/* Narrative text */}
       <div className={styles.narrative}>
         {isLatest ? (
           <Typewriter text={turn.narrative} speed={16} />
@@ -352,12 +380,19 @@ function TurnDisplay({ turn, isLatest }: { turn: GameTurn; isLatest: boolean }) 
         )}
       </div>
 
-      {/* Scene image */}
-      {turn.imageUrl && (
-        <div className={styles.sceneImage}>
-          <img src={turn.imageUrl} alt="Szene" loading="lazy" />
-        </div>
-      )}
+      {/* Scene image with shimmer loading + cinematic fade-in */}
+      <div className={styles.sceneImageContainer}>
+        {imageLoading && !imageUrl && (
+          <div className={styles.imageShimmer}>
+            <div className={styles.shimmerWave} />
+          </div>
+        )}
+        {imageUrl && (
+          <div className={`${styles.sceneImage} ${imageRevealed ? styles.sceneImageRevealed : ""}`}>
+            <img src={imageUrl} alt="Szene" loading="lazy" />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,7 @@
 import React from "react";
 import type { Character } from "@aetheria/shared";
+import { useGame } from "../context/GameContext.js";
+import { useCharacterPortrait } from "../hooks/useImagePolling.js";
 import styles from "./CharacterStatusBar.module.css";
 
 const CLASS_ICONS: Record<string, string> = {
@@ -17,13 +19,24 @@ interface CharacterStatusBarProps {
 }
 
 export function CharacterStatusBar({ character }: CharacterStatusBarProps) {
+  const { state } = useGame();
   const hpPercent = Math.max(0, Math.min(100, (character.hitPoints / character.maxHitPoints) * 100));
   const hpColor = hpPercent > 60 ? "#51cf66" : hpPercent > 30 ? "#ffd43b" : "#dc3545";
   const icon = CLASS_ICONS[character.characterClass] ?? "\u2B22";
 
+  const portraitUrl = useCharacterPortrait(
+    state.user?.id,
+    character.id,
+    character.portraitUrl,
+  );
+
   return (
     <div className={styles.bar}>
-      <span className={styles.classIcon}>{icon}</span>
+      {portraitUrl ? (
+        <img src={portraitUrl} alt={character.name} className={styles.portrait} />
+      ) : (
+        <span className={styles.classIcon}>{icon}</span>
+      )}
       <div className={styles.nameBlock}>
         <span className={styles.name}>{character.name}</span>
         <span className={styles.meta}>Lv.{character.level} {character.race} {character.characterClass}</span>

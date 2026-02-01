@@ -160,3 +160,12 @@ export async function discardItem(
     method: "DELETE",
   });
 }
+
+export async function getTurnImage(
+  sessionId: string,
+  turnId: string
+): Promise<ApiResponse<{ imageUrl: string | null }>> {
+  return request<{ imageUrl: string | null }>(
+    `/game/sessions/${sessionId}/turns/${turnId}/image`
+  );
+}

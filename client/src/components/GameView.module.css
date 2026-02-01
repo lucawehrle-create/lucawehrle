@@ -174,11 +174,65 @@
   gap: var(--space-sm);
 }
 
+/* Scene image container */
+.sceneImageContainer {
+  margin: var(--space-md) 0;
+  min-height: 40px;
+}
+
+/* Shimmer loading placeholder */
+.imageShimmer {
+  width: 100%;
+  height: 200px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(
+    110deg,
+    var(--color-surface-alt) 0%,
+    var(--color-surface-alt) 40%,
+    rgba(255, 255, 255, 0.05) 50%,
+    var(--color-surface-alt) 60%,
+    var(--color-surface-alt) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmerWave {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 25%,
+    rgba(var(--mood-primary-rgb, 139, 92, 246), 0.08) 50%,
+    transparent 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Scene image with cinematic reveal */
 .sceneImage {
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--mood-border);
-  margin: var(--space-sm) 0;
+  opacity: 0;
+  transform: scale(0.98);
+  max-height: 0;
+  transition: opacity 0.8s ease, transform 0.8s ease, max-height 0.6s ease;
+}
+
+.sceneImageRevealed {
+  opacity: 1;
+  transform: scale(1);
+  max-height: 600px;
 }
 
 .sceneImage img {

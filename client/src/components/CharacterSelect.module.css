@@ -59,6 +59,14 @@
   font-size: 1.8rem;
 }
 
+.portraitImage {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--mood-primary);
+}
+
 .charName {
   font-family: var(--font-heading);
   font-size: 1.1rem;

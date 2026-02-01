@@ -139,6 +139,24 @@ export function createGameRoutes(
   });
 
   /**
+   * GET /api/game/sessions/:sessionId/turns/:turnId/image
+   * Poll for a turn's scene image (generated asynchronously).
+   */
+  router.get("/sessions/:sessionId/turns/:turnId/image", (req: Request, res: Response) => {
+    const turn = store.getTurnById(req.params.sessionId, req.params.turnId);
+    if (!turn) {
+      res.status(404).json({ success: false, error: { code: "TURN_NOT_FOUND", message: "Turn not found" } });
+      return;
+    }
+
+    const response: ApiResponse<{ imageUrl: string | null }> = {
+      success: true,
+      data: { imageUrl: turn.imageUrl ?? null },
+    };
+    res.json(response);
+  });
+
+  /**
    * POST /api/game/sessions/:sessionId/action
    * Submit a player action (chosen option or free text).
    */

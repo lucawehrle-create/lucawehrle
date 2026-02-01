@@ -66,7 +66,7 @@ export function createApp() {
 
   // Routes
   app.use("/api/game", createGameRoutes(store, dungeonMaster, energyService, scannerService, aiService));
-  app.use("/api/users", createUserRoutes(store, energyService));
+  app.use("/api/users", createUserRoutes(store, energyService, aiService));
   app.use("/api/scenarios", createScenarioRoutes(store, energyService));
 
   // Health check

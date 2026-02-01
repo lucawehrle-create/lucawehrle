@@ -110,6 +110,11 @@ export class GameStore {
     return sessionTurns[sessionTurns.length - 1];
   }
 
+  getTurnById(sessionId: string, turnId: string): GameTurn | undefined {
+    const sessionTurns = this.turns.get(sessionId) ?? [];
+    return sessionTurns.find((t) => t.id === turnId);
+  }
+
   addTurn(turn: GameTurn): void {
     const sessionTurns = this.turns.get(turn.sessionId) ?? [];
     sessionTurns.push(turn);

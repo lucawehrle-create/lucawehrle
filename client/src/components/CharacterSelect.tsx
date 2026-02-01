@@ -37,11 +37,15 @@ export function CharacterSelect() {
             className={styles.card}
             onClick={() => handleSelectCharacter(char)}
           >
-            <div className={styles.avatar}>
-              <span className={styles.avatarIcon}>
-                {getClassIcon(char.characterClass)}
-              </span>
-            </div>
+            {char.portraitUrl ? (
+              <img src={char.portraitUrl} alt={char.name} className={styles.portraitImage} />
+            ) : (
+              <div className={styles.avatar}>
+                <span className={styles.avatarIcon}>
+                  {getClassIcon(char.characterClass)}
+                </span>
+              </div>
+            )}
             <h3 className={styles.charName}>{char.name}</h3>
             <p className={styles.charInfo}>
               {RACE_LABELS[char.race] ?? char.race} {CLASS_LABELS[char.characterClass] ?? char.characterClass}

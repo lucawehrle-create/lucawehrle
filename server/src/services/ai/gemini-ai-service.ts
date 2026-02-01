@@ -165,6 +165,52 @@ export class GeminiAIService implements AIService {
     return response.data?.[0]?.url ?? null;
   }
 
+  async generatePortrait(description: string, race: string, charClass: string): Promise<string | null> {
+    try {
+      const model = this.genAI.getGenerativeModel({
+        model: "gemini-2.0-flash-exp-image-generation",
+      });
+
+      const prompt = `Generate a fantasy RPG character portrait. Race: ${race}. Class: ${charClass}. Appearance: ${description}. Style: detailed fantasy portrait painting, dramatic lighting, dark moody background, shoulders-up framing, no text or labels, high quality digital art.`;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseModalities: ["IMAGE", "TEXT"],
+        } as any,
+      } as any);
+
+      const parts = result.response.candidates?.[0]?.content?.parts ?? [];
+      for (const part of parts) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const inline = (part as any).inlineData as
+          | { mimeType: string; data: string }
+          | undefined;
+        if (inline?.data) {
+          return `data:${inline.mimeType};base64,${inline.data}`;
+        }
+      }
+
+      // Fallback to DALL-E
+      if (this.imageEnabled) {
+        const dallePrompt = `Fantasy RPG character portrait: ${race} ${charClass}. ${description}. Dark background, dramatic lighting, shoulders-up, detailed digital art, no text.`;
+        const response = await this.openai.images.generate({
+          model: "dall-e-3",
+          prompt: dallePrompt.slice(0, 4000),
+          n: 1,
+          size: "1024x1024",
+          quality: "standard",
+        });
+        return response.data?.[0]?.url ?? null;
+      }
+      return null;
+    } catch (error) {
+      console.error("[GeminiAIService] Portrait generation failed:", error instanceof Error ? error.message : error);
+      return null;
+    }
+  }
+
   async analyzeObject(request: ObjectScanRequest): Promise<ObjectScanResponse> {
     const model = this.genAI.getGenerativeModel({
       model: this.textModel,

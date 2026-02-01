@@ -55,6 +55,7 @@ export interface Character {
   armorClass: number;
   abilities: AbilityScores;
   appearance: CharacterAppearance;
+  portraitUrl?: string;
   backstory: string;
   traits: string[];
   createdAt: string;

@@ -9,6 +9,15 @@
   font-size: 0.8rem;
 }
 
+.portrait {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--mood-primary);
+  flex-shrink: 0;
+}
+
 .classIcon {
   font-size: 1.1rem;
   line-height: 1;

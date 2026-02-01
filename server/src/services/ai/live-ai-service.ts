@@ -118,6 +118,25 @@ export class LiveAIService implements AIService {
     }
   }
 
+  async generatePortrait(description: string, race: string, charClass: string): Promise<string | null> {
+    if (!this.imageEnabled) return null;
+
+    try {
+      const prompt = `Fantasy RPG character portrait: ${race} ${charClass}. ${description}. Dark background, dramatic lighting, shoulders-up, detailed digital art, no text.`;
+      const response = await this.openai.images.generate({
+        model: "dall-e-3",
+        prompt: prompt.slice(0, 4000),
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+      });
+      return response.data?.[0]?.url ?? null;
+    } catch (error) {
+      console.error("[LiveAIService] Portrait generation failed:", error instanceof Error ? error.message : error);
+      return null;
+    }
+  }
+
   async analyzeObject(request: ObjectScanRequest): Promise<ObjectScanResponse> {
     const imageContent: Anthropic.ImageBlockParam =
       request.format === "url"

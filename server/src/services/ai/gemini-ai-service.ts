@@ -93,11 +93,76 @@ export class GeminiAIService implements AIService {
       quality: request.modelTier === "premium" || request.modelTier === "hd" ? "hd" : "standard",
     });
 
+    const img = response.data?.[0];
     return {
-      imageUrl: response.data[0].url ?? "",
-      revisedPrompt: response.data[0].revised_prompt ?? request.prompt,
+      imageUrl: img?.url ?? "",
+      revisedPrompt: img?.revised_prompt ?? request.prompt,
       generationTimeMs: Date.now() - start,
     };
+  }
+
+  async generateItemImage(visualDescription: string, itemName: string): Promise<string | null> {
+    try {
+      const model = this.genAI.getGenerativeModel({
+        model: "gemini-2.0-flash-exp-image-generation",
+      });
+
+      const prompt = `Generate a single RPG fantasy game item icon on a solid dark background (#1a1a2e). The item: "${itemName}". Visual details: ${visualDescription}. Style: detailed fantasy RPG item icon, painterly digital art style, glowing magical effects where appropriate, no text or labels, centered composition, 128x128 icon.`;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseModalities: ["IMAGE", "TEXT"],
+        } as any, // responseModalities may not be in the SDK type yet
+      } as any);
+
+      const parts = result.response.candidates?.[0]?.content?.parts ?? [];
+      for (const part of parts) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const inline = (part as any).inlineData as
+          | { mimeType: string; data: string }
+          | undefined;
+        if (inline?.data) {
+          return `data:${inline.mimeType};base64,${inline.data}`;
+        }
+      }
+
+      // Fallback: if DALL-E available, try that
+      if (this.imageEnabled) {
+        return this.generateItemImageWithDalle(visualDescription, itemName);
+      }
+      return null;
+    } catch (error) {
+      console.error(
+        "[GeminiAIService] Gemini image generation failed, trying fallback:",
+        error instanceof Error ? error.message : error,
+      );
+      // Fallback to DALL-E if available
+      if (this.imageEnabled) {
+        try {
+          return await this.generateItemImageWithDalle(visualDescription, itemName);
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    }
+  }
+
+  private async generateItemImageWithDalle(
+    visualDescription: string,
+    itemName: string,
+  ): Promise<string | null> {
+    const prompt = `RPG fantasy game item icon: "${itemName}". ${visualDescription}. Dark background, centered, detailed fantasy art, no text.`;
+    const response = await this.openai.images.generate({
+      model: "dall-e-3",
+      prompt: prompt.slice(0, 4000),
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
+    return response.data?.[0]?.url ?? null;
   }
 
   async analyzeObject(request: ObjectScanRequest): Promise<ObjectScanResponse> {

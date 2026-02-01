@@ -144,6 +144,20 @@ export class GameStore {
     return true;
   }
 
+  removeItemByName(characterId: string, itemName: string): boolean {
+    const inventory = this.inventories.get(characterId);
+    if (!inventory) return false;
+
+    const idx = inventory.items.findIndex(
+      (i) => i.name.toLowerCase() === itemName.toLowerCase(),
+    );
+    if (idx === -1) return false;
+
+    inventory.items.splice(idx, 1);
+    this.inventories.set(characterId, inventory);
+    return true;
+  }
+
   // --- Scenarios ---
 
   getScenario(id: string): ScenarioTemplate | undefined {

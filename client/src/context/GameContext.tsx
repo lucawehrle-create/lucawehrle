@@ -7,7 +7,16 @@ import type {
   Inventory,
   SceneMood,
   ScenarioTemplate,
+  GameEvent,
 } from "@aetheria/shared";
+
+/** A notification about an item gained or lost */
+export interface ItemNotification {
+  id: string;
+  type: "acquired" | "lost";
+  itemName: string;
+  rarity?: string;
+}
 
 /** Application view state */
 export type AppView =
@@ -28,6 +37,7 @@ export interface GameState {
   session: GameSession | null;
   turns: GameTurn[];
   inventory: Inventory | null;
+  itemNotifications: ItemNotification[];
   mood: SceneMood;
   isLoading: boolean;
   error: string | null;
@@ -44,6 +54,8 @@ export type GameAction =
   | { type: "ADD_TURN"; turn: GameTurn }
   | { type: "UPDATE_SESSION"; session: GameSession }
   | { type: "SET_INVENTORY"; inventory: Inventory }
+  | { type: "PROCESS_EVENTS"; events: GameEvent[]; inventory: Inventory }
+  | { type: "DISMISS_NOTIFICATION"; id: string }
   | { type: "SET_MOOD"; mood: SceneMood }
   | { type: "SET_LOADING"; isLoading: boolean }
   | { type: "SET_ERROR"; error: string | null }
@@ -58,6 +70,7 @@ const initialState: GameState = {
   session: null,
   turns: [],
   inventory: null,
+  itemNotifications: [],
   mood: "exploration",
   isLoading: false,
   error: null,
@@ -93,6 +106,37 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, session: action.session };
     case "SET_INVENTORY":
       return { ...state, inventory: action.inventory };
+    case "PROCESS_EVENTS": {
+      const notifications: ItemNotification[] = [];
+      for (const evt of action.events) {
+        if (evt.type === "item_acquired") {
+          const p = evt.payload as Record<string, unknown>;
+          notifications.push({
+            id: evt.turnId + "_acq_" + String(p.name ?? ""),
+            type: "acquired",
+            itemName: String(p.name ?? "Gegenstand"),
+            rarity: String(p.rarity ?? "common"),
+          });
+        } else if (evt.type === "item_lost") {
+          const p = evt.payload as Record<string, unknown>;
+          notifications.push({
+            id: evt.turnId + "_lost_" + String(p.name ?? ""),
+            type: "lost",
+            itemName: String(p.name ?? "Gegenstand"),
+          });
+        }
+      }
+      return {
+        ...state,
+        inventory: action.inventory,
+        itemNotifications: [...state.itemNotifications, ...notifications],
+      };
+    }
+    case "DISMISS_NOTIFICATION":
+      return {
+        ...state,
+        itemNotifications: state.itemNotifications.filter((n) => n.id !== action.id),
+      };
     case "SET_MOOD":
       return { ...state, mood: action.mood };
     case "SET_LOADING":

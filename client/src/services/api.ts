@@ -122,8 +122,8 @@ export async function getSession(
 export async function submitAction(
   sessionId: string,
   action: SubmitActionRequest["action"]
-): Promise<ApiResponse<{ turn: GameTurn; events: GameEvent[] }>> {
-  return request<{ turn: GameTurn; events: GameEvent[] }>(
+): Promise<ApiResponse<{ turn: GameTurn; events: GameEvent[]; inventory: Inventory }>> {
+  return request<{ turn: GameTurn; events: GameEvent[]; inventory: Inventory }>(
     `/game/sessions/${sessionId}/action`,
     {
       method: "POST",
@@ -150,4 +150,13 @@ export async function getInventory(
   characterId: string
 ): Promise<ApiResponse<Inventory>> {
   return request<Inventory>(`/game/inventory/${characterId}`);
+}
+
+export async function discardItem(
+  characterId: string,
+  itemId: string
+): Promise<ApiResponse<Inventory>> {
+  return request<Inventory>(`/game/inventory/${characterId}/items/${itemId}`, {
+    method: "DELETE",
+  });
 }

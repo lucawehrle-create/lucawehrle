@@ -29,6 +29,8 @@ export interface Item {
   rarity: ItemRarity;
   /** Visual prompt for consistent image generation of this item */
   visualDescription: string;
+  /** Generated image URL or base64 data URI */
+  imageUrl?: string;
   properties: ItemProperties;
   /** If scanned from real world, stores the original scan data */
   scanData?: ScannedObjectData;

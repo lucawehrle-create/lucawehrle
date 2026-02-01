@@ -18,6 +18,9 @@ export interface AIService {
   /** Generate a scene image */
   generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse>;
 
+  /** Generate a small item image from a visual description. Returns a data URI or null on failure. */
+  generateItemImage(visualDescription: string, itemName: string): Promise<string | null>;
+
   /** Analyze a scanned real-world object */
   analyzeObject(request: ObjectScanRequest): Promise<ObjectScanResponse>;
 }
@@ -112,6 +115,11 @@ export class MockAIService implements AIService {
       revisedPrompt: request.prompt,
       generationTimeMs: Math.floor(Math.random() * 3000) + 1000,
     };
+  }
+
+  async generateItemImage(visualDescription: string, itemName: string): Promise<string | null> {
+    // Return a placeholder item image
+    return `https://placehold.co/128x128/1a1a2e/e0e0e0?text=${encodeURIComponent(itemName.slice(0, 12))}`;
   }
 
   async analyzeObject(request: ObjectScanRequest): Promise<ObjectScanResponse> {

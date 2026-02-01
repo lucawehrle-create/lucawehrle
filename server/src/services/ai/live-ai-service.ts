@@ -91,11 +91,31 @@ export class LiveAIService implements AIService {
       quality: request.modelTier === "premium" || request.modelTier === "hd" ? "hd" : "standard",
     });
 
+    const img = response.data?.[0];
     return {
-      imageUrl: response.data[0].url ?? "",
-      revisedPrompt: response.data[0].revised_prompt ?? request.prompt,
+      imageUrl: img?.url ?? "",
+      revisedPrompt: img?.revised_prompt ?? request.prompt,
       generationTimeMs: Date.now() - start,
     };
+  }
+
+  async generateItemImage(visualDescription: string, itemName: string): Promise<string | null> {
+    if (!this.imageEnabled) return null;
+
+    try {
+      const prompt = `RPG fantasy game item icon: "${itemName}". ${visualDescription}. Dark background, centered, detailed fantasy art, no text.`;
+      const response = await this.openai.images.generate({
+        model: "dall-e-3",
+        prompt: prompt.slice(0, 4000),
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+      });
+      return response.data?.[0]?.url ?? null;
+    } catch (error) {
+      console.error("[LiveAIService] Item image generation failed:", error instanceof Error ? error.message : error);
+      return null;
+    }
   }
 
   async analyzeObject(request: ObjectScanRequest): Promise<ObjectScanResponse> {

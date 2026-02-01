@@ -398,3 +398,65 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* Item notification toasts */
+.notificationStack {
+  position: fixed;
+  top: var(--space-lg);
+  right: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  z-index: 200;
+  pointer-events: none;
+}
+
+.itemNotification {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--mood-primary);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  animation: slideInRight 0.4s ease;
+  cursor: pointer;
+  pointer-events: auto;
+  min-width: 220px;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.notifIcon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.notifContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notifLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+}
+
+.notifName {
+  font-weight: 600;
+  font-size: 0.95rem;
+}

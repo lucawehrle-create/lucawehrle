@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useGame } from "../context/GameContext.js";
+import type { ItemNotification } from "../context/GameContext.js";
 import { submitAction, scanObject } from "../services/api.js";
 import type { GameTurn, ActionOption } from "@aetheria/shared";
 import { DiceRollDisplay } from "./DiceRollDisplay.js";
@@ -21,6 +22,15 @@ const ACTION_TYPE_ICONS: Record<string, string> = {
   stealth: "\uD83E\uDD77",
 };
 
+const RARITY_COLORS: Record<string, string> = {
+  common: "#adb5bd",
+  uncommon: "#51cf66",
+  rare: "#339af0",
+  epic: "#b197fc",
+  legendary: "#ffd43b",
+  artifact: "#ff6b6b",
+};
+
 export function GameView() {
   const { state, dispatch } = useGame();
   const [freeText, setFreeText] = useState("");
@@ -34,6 +44,15 @@ export function GameView() {
   useEffect(() => {
     narrativeEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.turns.length]);
+
+  // Auto-dismiss item notifications after 5 seconds
+  useEffect(() => {
+    if (state.itemNotifications.length === 0) return;
+    const timer = setTimeout(() => {
+      dispatch({ type: "DISMISS_NOTIFICATION", id: state.itemNotifications[0].id });
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [state.itemNotifications, dispatch]);
 
   // Keyboard shortcuts: 1-4 for action options, I for inventory
   const handleKeyDown = useCallback(
@@ -74,6 +93,14 @@ export function GameView() {
 
     if (result.success && result.data) {
       dispatch({ type: "ADD_TURN", turn: result.data.turn });
+      // Process events and update inventory
+      if (result.data.events.length > 0 || result.data.inventory) {
+        dispatch({
+          type: "PROCESS_EVENTS",
+          events: result.data.events,
+          inventory: result.data.inventory,
+        });
+      }
     } else {
       dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Action failed" });
     }
@@ -95,6 +122,14 @@ export function GameView() {
 
     if (result.success && result.data) {
       dispatch({ type: "ADD_TURN", turn: result.data.turn });
+      // Process events and update inventory
+      if (result.data.events.length > 0 || result.data.inventory) {
+        dispatch({
+          type: "PROCESS_EVENTS",
+          events: result.data.events,
+          inventory: result.data.inventory,
+        });
+      }
     } else {
       dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Action failed" });
     }
@@ -113,9 +148,9 @@ export function GameView() {
 
     if (result.success && result.data) {
       dispatch({ type: "SET_ERROR", error: null });
-      alert(`Scanned: ${result.data.item.name}\n${result.data.item.description}`);
+      alert(`Gescannt: ${result.data.item.name}\n${result.data.item.description}`);
     } else {
-      dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Scan failed" });
+      dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Scan fehlgeschlagen" });
     }
     setIsProcessing(false);
   }
@@ -132,7 +167,7 @@ export function GameView() {
         <div className={styles.headerLeft}>
           <div className={styles.sessionInfo}>
             <h2 className={styles.sessionTitle}>{state.session?.title}</h2>
-            <span className={styles.turnCounter}>Turn {state.session?.turnCount ?? 0}</span>
+            <span className={styles.turnCounter}>Zug {state.session?.turnCount ?? 0}</span>
           </div>
           {state.selectedCharacter && (
             <CharacterStatusBar character={state.selectedCharacter} />
@@ -142,11 +177,11 @@ export function GameView() {
           <button
             className={styles.iconButton}
             onClick={() => setShowInventory(!showInventory)}
-            title="Inventory (I)"
+            title="Inventar (I)"
           >
             <span className={styles.btnIcon}>{"\uD83C\uDF92"}</span> Inventar
           </button>
-          <button className={styles.iconButton} onClick={handleScan} title="Scan Object (AR)">
+          <button className={styles.iconButton} onClick={handleScan} title="Objekt scannen (AR)">
             <span className={styles.btnIcon}>{"\uD83D\uDCF7"}</span> Scan
           </button>
           <div className={styles.energyBadge}>
@@ -233,6 +268,19 @@ export function GameView() {
         )}
       </div>
 
+      {/* Item notifications */}
+      {state.itemNotifications.length > 0 && (
+        <div className={styles.notificationStack}>
+          {state.itemNotifications.map((notif) => (
+            <ItemNotificationToast
+              key={notif.id}
+              notification={notif}
+              onDismiss={() => dispatch({ type: "DISMISS_NOTIFICATION", id: notif.id })}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Error display */}
       {state.error && (
         <div className={styles.errorBanner}>
@@ -240,6 +288,35 @@ export function GameView() {
           <button onClick={() => dispatch({ type: "SET_ERROR", error: null })}>OK</button>
         </div>
       )}
+    </div>
+  );
+}
+
+function ItemNotificationToast({
+  notification,
+  onDismiss,
+}: {
+  notification: ItemNotification;
+  onDismiss: () => void;
+}) {
+  const color = RARITY_COLORS[notification.rarity ?? "common"] ?? "#adb5bd";
+  const isAcquired = notification.type === "acquired";
+
+  return (
+    <div
+      className={styles.itemNotification}
+      style={{ borderLeftColor: color }}
+      onClick={onDismiss}
+    >
+      <span className={styles.notifIcon}>{isAcquired ? "\u2728" : "\uD83D\uDDD1\uFE0F"}</span>
+      <div className={styles.notifContent}>
+        <span className={styles.notifLabel}>
+          {isAcquired ? "Gegenstand erhalten" : "Gegenstand verloren"}
+        </span>
+        <span className={styles.notifName} style={{ color }}>
+          {notification.itemName}
+        </span>
+      </div>
     </div>
   );
 }

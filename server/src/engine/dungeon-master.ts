@@ -220,20 +220,21 @@ export class DungeonMaster {
       difficultyClass: opt.difficultyClass,
     }));
 
-    // Process events from AI
+    const newMood = aiResponse.mood as SceneMood;
+    const turnId = uuidv4();
+
+    // Process events from AI (using the actual turn ID)
     for (const evt of aiResponse.events) {
       events.push({
         type: evt.type as GameEvent["type"],
         payload: evt.payload,
-        turnId: uuidv4(),
+        turnId,
         timestamp: new Date().toISOString(),
       });
     }
 
-    const newMood = aiResponse.mood as SceneMood;
-
     const turn: GameTurn = {
-      id: uuidv4(),
+      id: turnId,
       sessionId: session.id,
       turnNumber,
       narrative,

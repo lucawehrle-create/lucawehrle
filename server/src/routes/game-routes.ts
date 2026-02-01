@@ -13,6 +13,11 @@ import type {
   CreateSessionRequest,
   SubmitActionRequest,
   ScanObjectRequest,
+  Inventory,
+  Item,
+  ItemCategory,
+  ItemRarity,
+  ItemEffect,
 } from "@aetheria/shared";
 
 export function createGameRoutes(
@@ -206,7 +211,7 @@ export function createGameRoutes(
       store.updateSession(result.updatedSession);
       store.addTurn(result.turn);
 
-      // Generate image asynchronously
+      // Generate scene image asynchronously
       aiService.generateImage({
         prompt: result.turn.imagePrompt,
         characterAppearance: character.appearance.clothing,
@@ -219,9 +224,62 @@ export function createGameRoutes(
         // Image generation failure is non-blocking
       });
 
-      const response: ApiResponse<{ turn: GameTurn; events: typeof result.events }> = {
+      // Process inventory events from AI
+      for (const event of result.events) {
+        if (event.type === "item_acquired") {
+          const p = event.payload as Record<string, unknown>;
+          const validCategories: ItemCategory[] = ["weapon", "armor", "potion", "scroll", "key", "quest", "material", "food", "tool", "scanned_object"];
+          const validRarities: ItemRarity[] = ["common", "uncommon", "rare", "epic", "legendary", "artifact"];
+          const rawCategory = String(p.category ?? "quest");
+          const rawRarity = String(p.rarity ?? "common");
+
+          const newItem: Item = {
+            id: uuidv4(),
+            name: String(p.name ?? "Unbekannter Gegenstand"),
+            description: String(p.description ?? ""),
+            category: validCategories.includes(rawCategory as ItemCategory) ? rawCategory as ItemCategory : "quest",
+            rarity: validRarities.includes(rawRarity as ItemRarity) ? rawRarity as ItemRarity : "common",
+            visualDescription: String(p.visualDescription ?? ""),
+            properties: {
+              weight: Number(p.weight) || 1,
+              value: Number(p.value) || 0,
+              effects: Array.isArray(p.effects)
+                ? (p.effects as ItemEffect[])
+                : [],
+            },
+            acquiredAt: new Date().toISOString(),
+            acquiredTurnId: result.turn.id,
+          };
+
+          store.addItem(character.id, newItem);
+
+          // Generate item image asynchronously via AI
+          if (newItem.visualDescription) {
+            aiService
+              .generateItemImage(newItem.visualDescription, newItem.name)
+              .then((imageUrl) => {
+                if (imageUrl) {
+                  newItem.imageUrl = imageUrl;
+                }
+              })
+              .catch(() => {
+                // Item image generation failure is non-blocking
+              });
+          }
+        } else if (event.type === "item_lost") {
+          const p = event.payload as Record<string, unknown>;
+          const itemName = String(p.name ?? "");
+          if (itemName) {
+            store.removeItemByName(character.id, itemName);
+          }
+        }
+      }
+
+      const updatedInventory = store.getInventory(character.id)!;
+
+      const response: ApiResponse<{ turn: GameTurn; events: typeof result.events; inventory: Inventory }> = {
         success: true,
-        data: { turn: result.turn, events: result.events },
+        data: { turn: result.turn, events: result.events, inventory: updatedInventory },
       };
       res.json(response);
     } catch (error) {
@@ -310,6 +368,34 @@ export function createGameRoutes(
     }
 
     const response: ApiResponse<typeof inventory> = { success: true, data: inventory };
+    res.json(response);
+  });
+
+  /**
+   * DELETE /api/game/inventory/:characterId/items/:itemId
+   * Discard (drop) an item from inventory.
+   */
+  router.delete("/inventory/:characterId/items/:itemId", (req: Request, res: Response) => {
+    const userId = req.headers["x-user-id"] as string;
+    if (!userId) {
+      res.status(401).json({ success: false, error: { code: "UNAUTHORIZED", message: "Missing user ID" } });
+      return;
+    }
+
+    const character = store.getCharacter(req.params.characterId);
+    if (!character || character.userId !== userId) {
+      res.status(404).json({ success: false, error: { code: "CHARACTER_NOT_FOUND", message: "Character not found" } });
+      return;
+    }
+
+    const removed = store.removeItem(req.params.characterId, req.params.itemId);
+    if (!removed) {
+      res.status(404).json({ success: false, error: { code: "ITEM_NOT_FOUND", message: "Item not found in inventory" } });
+      return;
+    }
+
+    const inventory = store.getInventory(req.params.characterId)!;
+    const response: ApiResponse<Inventory> = { success: true, data: inventory };
     res.json(response);
   });
 

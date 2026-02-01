@@ -5,6 +5,7 @@ import { GameStore } from "./store/game-store.js";
 import { DungeonMaster } from "./engine/dungeon-master.js";
 import { MockAIService } from "./services/ai/ai-service.js";
 import { LiveAIService } from "./services/ai/live-ai-service.js";
+import { GeminiAIService } from "./services/ai/gemini-ai-service.js";
 import type { AIService } from "./services/ai/ai-service.js";
 import { InMemoryMemoryService } from "./services/memory/memory-service.js";
 import { ContentSafetyService } from "./services/safety/safety-service.js";
@@ -22,23 +23,37 @@ export function createApp() {
   app.use(cors());
   app.use(express.json({ limit: "10mb" })); // Large limit for base64 image scans
 
-  // Initialize AI service – live if API key is set, otherwise mock
+  // Initialize AI service based on configured provider
   let aiService: AIService;
 
-  if (config.liveAI) {
-    aiService = new LiveAIService({
-      anthropicApiKey: config.anthropicApiKey!,
-      openaiApiKey: config.openaiApiKey,
-      textModel: config.aiTextModel,
-    });
-    console.log("[Aetheria AI] KI-Modus: LIVE (Claude + DALL-E)");
-    if (!config.openaiApiKey) {
-      console.log("[Aetheria AI] Hinweis: Kein OPENAI_API_KEY gesetzt – Bilder werden als Platzhalter angezeigt");
-    }
-  } else {
-    aiService = new MockAIService();
-    console.log("[Aetheria AI] KI-Modus: MOCK (vorgeschriebene Texte)");
-    console.log("[Aetheria AI] Tipp: Setze ANTHROPIC_API_KEY in .env fuer echte KI");
+  switch (config.aiProvider) {
+    case "anthropic":
+      aiService = new LiveAIService({
+        anthropicApiKey: config.anthropicApiKey!,
+        openaiApiKey: config.openaiApiKey,
+        textModel: config.aiTextModel,
+      });
+      console.log("[Aetheria AI] KI-Modus: LIVE (Claude + DALL-E)");
+      break;
+
+    case "gemini":
+      aiService = new GeminiAIService({
+        geminiApiKey: config.geminiApiKey!,
+        openaiApiKey: config.openaiApiKey,
+        textModel: config.aiTextModel,
+      });
+      console.log("[Aetheria AI] KI-Modus: LIVE (Gemini + DALL-E)");
+      break;
+
+    default:
+      aiService = new MockAIService();
+      console.log("[Aetheria AI] KI-Modus: MOCK (vorgeschriebene Texte)");
+      console.log("[Aetheria AI] Tipp: Setze ANTHROPIC_API_KEY oder GEMINI_API_KEY in .env fuer echte KI");
+      break;
+  }
+
+  if (config.aiProvider !== "mock" && !config.openaiApiKey) {
+    console.log("[Aetheria AI] Hinweis: Kein OPENAI_API_KEY – Bilder werden als Platzhalter angezeigt");
   }
 
   // Initialize other services
@@ -60,8 +75,8 @@ export function createApp() {
       status: "ok",
       service: "Aetheria AI",
       version: "1.0.0",
-      aiMode: config.liveAI ? "live" : "mock",
-      imageGeneration: config.liveAI && !!config.openaiApiKey ? "dall-e-3" : "placeholder",
+      aiProvider: config.aiProvider,
+      imageGeneration: config.aiProvider !== "mock" && !!config.openaiApiKey ? "dall-e-3" : "placeholder",
       timestamp: new Date().toISOString(),
     });
   });

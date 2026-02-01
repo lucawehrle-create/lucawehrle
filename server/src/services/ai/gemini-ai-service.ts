@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import type {
   TextGenerationRequest,
@@ -20,39 +20,41 @@ import {
 } from "./prompts.js";
 
 /**
- * AI service using Anthropic Claude (text + vision) and OpenAI DALL-E 3 (images).
+ * AI service using Google Gemini (text + vision) and OpenAI DALL-E 3 (images).
  */
-export class LiveAIService implements AIService {
-  private anthropic: Anthropic;
+export class GeminiAIService implements AIService {
+  private genAI: GoogleGenerativeAI;
   private openai: OpenAI;
   private textModel: string;
   private imageEnabled: boolean;
 
   constructor(config: {
-    anthropicApiKey: string;
+    geminiApiKey: string;
     openaiApiKey?: string;
     textModel?: string;
   }) {
-    this.anthropic = new Anthropic({ apiKey: config.anthropicApiKey });
+    this.genAI = new GoogleGenerativeAI(config.geminiApiKey);
     this.openai = new OpenAI({ apiKey: config.openaiApiKey ?? "" });
-    this.textModel = config.textModel ?? "claude-sonnet-4-20250514";
+    this.textModel = config.textModel ?? "gemini-2.0-flash";
     this.imageEnabled = !!config.openaiApiKey;
   }
 
   async generateText(request: TextGenerationRequest): Promise<TextGenerationResponse> {
     const userPrompt = buildTextPrompt(request);
 
-    const response = await this.anthropic.messages.create({
+    const model = this.genAI.getGenerativeModel({
       model: this.textModel,
-      max_tokens: 1024,
-      system: DUNGEON_MASTER_SYSTEM_PROMPT,
-      messages: [{ role: "user", content: userPrompt }],
+      systemInstruction: DUNGEON_MASTER_SYSTEM_PROMPT,
     });
 
-    const rawText =
-      response.content[0].type === "text" ? response.content[0].text : "";
+    const result = await model.generateContent(userPrompt);
+    const rawText = result.response.text();
 
     const parsed = parseJSON(rawText, TEXT_GENERATION_FALLBACK);
+
+    // Gemini doesn't expose exact token counts in the same way,
+    // so we estimate from the response metadata if available.
+    const usage = result.response.usageMetadata;
 
     return {
       narrative: parsed.narrative,
@@ -61,9 +63,9 @@ export class LiveAIService implements AIService {
       imagePrompt: parsed.imagePrompt,
       events: parsed.events ?? [],
       tokenUsage: {
-        promptTokens: response.usage.input_tokens,
-        completionTokens: response.usage.output_tokens,
-        totalTokens: response.usage.input_tokens + response.usage.output_tokens,
+        promptTokens: usage?.promptTokenCount ?? 0,
+        completionTokens: usage?.candidatesTokenCount ?? 0,
+        totalTokens: usage?.totalTokenCount ?? 0,
       },
     };
   }
@@ -99,38 +101,33 @@ export class LiveAIService implements AIService {
   }
 
   async analyzeObject(request: ObjectScanRequest): Promise<ObjectScanResponse> {
-    const imageContent: Anthropic.ImageBlockParam =
-      request.format === "url"
-        ? { type: "image", source: { type: "url", url: request.imageData } }
-        : {
-            type: "image",
-            source: {
-              type: "base64",
-              media_type: "image/jpeg",
-              data: request.imageData,
-            },
-          };
-
-    const response = await this.anthropic.messages.create({
+    const model = this.genAI.getGenerativeModel({
       model: this.textModel,
-      max_tokens: 1024,
-      system: OBJECT_SCAN_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: [
-            imageContent,
-            {
-              type: "text",
-              text: "Analyze this real-world object and transform it into a fantasy RPG item. Preserve ALL visual details exactly (stickers, labels, proportions, markings).",
-            },
-          ],
-        },
-      ],
+      systemInstruction: OBJECT_SCAN_SYSTEM_PROMPT,
     });
 
-    const rawText =
-      response.content[0].type === "text" ? response.content[0].text : "";
+    let parts: Parameters<typeof model.generateContent>[0];
+
+    if (request.format === "base64") {
+      parts = [
+        {
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: request.imageData,
+          },
+        },
+        "Analyze this real-world object and transform it into a fantasy RPG item. Preserve ALL visual details exactly (stickers, labels, proportions, markings).",
+      ];
+    } else {
+      // For URL-based images, tell Gemini about the image via text
+      // (Gemini supports inline data but not arbitrary URLs directly)
+      parts = [
+        `Image URL: ${request.imageData}\n\nAnalyze this real-world object and transform it into a fantasy RPG item. Preserve ALL visual details exactly (stickers, labels, proportions, markings).`,
+      ];
+    }
+
+    const result = await model.generateContent(parts);
+    const rawText = result.response.text();
 
     return parseJSON(rawText, OBJECT_SCAN_FALLBACK);
   }

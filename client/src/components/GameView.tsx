@@ -327,6 +327,14 @@ function ItemNotificationToast({
   );
 }
 
+const SCENE_LOADING_MESSAGES = [
+  "Szene wird gemalt...",
+  "Farben mischen sich...",
+  "Licht und Schatten entstehen...",
+  "Die Welt nimmt Gestalt an...",
+  "Pinselstriche der Magie...",
+];
+
 function TurnDisplay({
   turn,
   isLatest,
@@ -337,12 +345,23 @@ function TurnDisplay({
   sessionId: string | undefined;
 }) {
   const paragraphs = turn.narrative.split(/\n\n+/).filter(Boolean);
+  // Only poll for images on the latest turn; older turns use their stored URL
   const { imageUrl, isLoading: imageLoading } = useSceneImage(
-    sessionId,
-    turn.id,
+    isLatest ? sessionId : undefined,
+    isLatest ? turn.id : undefined,
     turn.imageUrl,
   );
   const [imageRevealed, setImageRevealed] = useState(!!turn.imageUrl);
+  const [shimmerMsgIndex, setShimmerMsgIndex] = useState(0);
+
+  // Cycle through loading messages
+  useEffect(() => {
+    if (!imageLoading || imageUrl) return;
+    const timer = setInterval(() => {
+      setShimmerMsgIndex((i) => (i + 1) % SCENE_LOADING_MESSAGES.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [imageLoading, imageUrl]);
 
   // Trigger cinematic reveal when image loads
   useEffect(() => {
@@ -382,9 +401,11 @@ function TurnDisplay({
 
       {/* Scene image with shimmer loading + cinematic fade-in */}
       <div className={styles.sceneImageContainer}>
-        {imageLoading && !imageUrl && (
+        {isLatest && imageLoading && !imageUrl && (
           <div className={styles.imageShimmer}>
             <div className={styles.shimmerWave} />
+            <span className={styles.shimmerIcon}>{"\uD83C\uDFA8"}</span>
+            <span className={styles.shimmerText}>{SCENE_LOADING_MESSAGES[shimmerMsgIndex]}</span>
           </div>
         )}
         {imageUrl && (

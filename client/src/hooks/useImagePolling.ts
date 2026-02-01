@@ -24,28 +24,35 @@ export function useSceneImage(
   useEffect(() => {
     if (!sessionId || !turnId || imageUrl) return;
 
-    const maxAttempts = 15; // 15 * 2s = 30s max
-    const interval = setInterval(async () => {
-      attemptsRef.current++;
-      if (attemptsRef.current > maxAttempts) {
-        setIsLoading(false);
-        clearInterval(interval);
-        return;
-      }
+    let cancelled = false;
+    const maxAttempts = 20; // 20 * 1.5s = 30s max
 
+    async function poll() {
       try {
-        const result = await getTurnImage(sessionId, turnId);
-        if (result.success && result.data?.imageUrl) {
+        const result = await getTurnImage(sessionId!, turnId!);
+        if (!cancelled && result.success && result.data?.imageUrl) {
           setImageUrl(result.data.imageUrl);
           setIsLoading(false);
-          clearInterval(interval);
+          return;
         }
       } catch {
         // Ignore network errors, keep polling
       }
-    }, 2000);
+      attemptsRef.current++;
+      if (!cancelled && attemptsRef.current < maxAttempts) {
+        timerId = setTimeout(poll, 1500);
+      } else if (!cancelled) {
+        setIsLoading(false);
+      }
+    }
 
-    return () => clearInterval(interval);
+    // Start first poll immediately (after a tiny delay for server processing)
+    let timerId: ReturnType<typeof setTimeout> = setTimeout(poll, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timerId);
+    };
   }, [sessionId, turnId, imageUrl]);
 
   return { imageUrl, isLoading };

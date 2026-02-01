@@ -71,6 +71,46 @@ export class GeminiAIService implements AIService {
   }
 
   async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
+    const start = Date.now();
+    const styleHint = buildImageStyleHint(request.style);
+    const fullPrompt = `${request.prompt}. ${styleHint}. Character: ${request.characterAppearance}. Mood: ${request.mood}. No text or UI elements in the image.`;
+
+    // Try Gemini native image generation first (faster, returns base64)
+    try {
+      const imageModel = this.genAI.getGenerativeModel({
+        model: "gemini-2.0-flash-exp-image-generation",
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await imageModel.generateContent({
+        contents: [{ role: "user", parts: [{ text: `Generate an atmospheric scene image: ${fullPrompt}` }] }],
+        generationConfig: {
+          responseModalities: ["IMAGE", "TEXT"],
+        } as any,
+      } as any);
+
+      const parts = result.response.candidates?.[0]?.content?.parts ?? [];
+      for (const part of parts) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const inline = (part as any).inlineData as
+          | { mimeType: string; data: string }
+          | undefined;
+        if (inline?.data) {
+          return {
+            imageUrl: `data:${inline.mimeType};base64,${inline.data}`,
+            revisedPrompt: fullPrompt,
+            generationTimeMs: Date.now() - start,
+          };
+        }
+      }
+    } catch (error) {
+      console.error(
+        "[GeminiAIService] Gemini scene image generation failed, trying DALL-E fallback:",
+        error instanceof Error ? error.message : error,
+      );
+    }
+
+    // Fallback to DALL-E if Gemini failed or returned no image
     if (!this.imageEnabled) {
       const w = request.width ?? 1024;
       const h = request.height ?? 1024;
@@ -80,10 +120,6 @@ export class GeminiAIService implements AIService {
         generationTimeMs: 0,
       };
     }
-
-    const start = Date.now();
-    const styleHint = buildImageStyleHint(request.style);
-    const fullPrompt = `${request.prompt}. ${styleHint}. Character: ${request.characterAppearance}. Mood: ${request.mood}. No text or UI elements in the image.`;
 
     const response = await this.openai.images.generate({
       model: "dall-e-3",

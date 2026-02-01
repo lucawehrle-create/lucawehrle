@@ -3,6 +3,7 @@
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  position: relative;
 }
 
 /* Header */
@@ -10,11 +11,19 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-sm) var(--space-lg);
   background: var(--color-surface);
   border-bottom: 2px solid var(--mood-border);
   flex-shrink: 0;
   transition: border-color var(--transition-slow);
+  z-index: 2;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
 }
 
 .sessionInfo {
@@ -40,22 +49,31 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  flex-shrink: 0;
 }
 
 .iconButton {
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-xs) var(--space-md);
   background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   color: var(--color-text);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .iconButton:hover {
   border-color: var(--mood-primary);
   color: var(--mood-primary);
+}
+
+.btnIcon {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .energyBadge {
@@ -65,6 +83,13 @@
   padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-sm);
   font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.energyIcon {
+  font-size: 0.9rem;
 }
 
 /* Main content */
@@ -72,6 +97,7 @@
   display: flex;
   flex: 1;
   overflow: hidden;
+  z-index: 1;
 }
 
 .narrativeScroll {
@@ -161,6 +187,7 @@
   border-top: 2px solid var(--mood-border);
   transition: border-color var(--transition-slow);
   position: relative;
+  z-index: 2;
 }
 
 .moodBorder {
@@ -187,7 +214,7 @@
 .optionButton {
   flex: 1 1 calc(50% - var(--space-sm));
   min-width: 200px;
-  padding: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
   background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -204,6 +231,18 @@
   border-color: var(--mood-primary);
   background: var(--mood-glow);
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.optionHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.optionIcon {
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
 .optionType {
@@ -212,6 +251,18 @@
   letter-spacing: 1px;
   color: var(--mood-primary);
   font-weight: 600;
+  flex: 1;
+}
+
+.shortcutKey {
+  font-size: 0.6rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  line-height: 1.2;
 }
 
 .optionText {

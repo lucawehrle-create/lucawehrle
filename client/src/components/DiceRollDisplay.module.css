@@ -7,6 +7,13 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
+  animation: rollIn 0.4s ease-out;
+}
+
+@keyframes rollIn {
+  0% { transform: scale(0.8) rotate(-5deg); opacity: 0; }
+  50% { transform: scale(1.05) rotate(2deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
 .diceIcon {
@@ -14,6 +21,17 @@
   color: var(--mood-primary);
   width: 24px;
   text-align: center;
+  animation: diceShake 0.5s ease-out;
+}
+
+@keyframes diceShake {
+  0% { transform: rotate(0deg); }
+  15% { transform: rotate(15deg); }
+  30% { transform: rotate(-10deg); }
+  45% { transform: rotate(8deg); }
+  60% { transform: rotate(-4deg); }
+  75% { transform: rotate(2deg); }
+  100% { transform: rotate(0deg); }
 }
 
 .info {

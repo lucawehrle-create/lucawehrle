@@ -1,9 +1,15 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 .container {
   max-width: 640px;
   margin: 0 auto;
-  padding: var(--space-2xl) var(--space-lg);
+  padding: var(--space-xl) var(--space-lg);
   overflow-y: auto;
-  max-height: 100vh;
+  flex: 1;
 }
 
 .title {
@@ -290,24 +296,8 @@
   margin-top: var(--space-md);
 }
 
-.backButton {
-  flex: 1;
-  padding: var(--space-md);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text);
-  font-size: 1rem;
-  font-family: var(--font-heading);
-  cursor: pointer;
-}
-
-.backButton:hover {
-  border-color: var(--color-text-muted);
-}
-
 .createButton {
-  flex: 2;
+  flex: 1;
   padding: var(--space-md);
   background: linear-gradient(135deg, var(--color-accent), #a78bfa);
   border: none;

@@ -25,7 +25,8 @@ export type AppView =
   | "character_create"
   | "scenario_select"
   | "game"
-  | "inventory";
+  | "inventory"
+  | "settings";
 
 /** Full application state */
 export interface GameState {
@@ -59,6 +60,7 @@ export type GameAction =
   | { type: "SET_MOOD"; mood: SceneMood }
   | { type: "SET_LOADING"; isLoading: boolean }
   | { type: "SET_ERROR"; error: string | null }
+  | { type: "LEAVE_GAME" }
   | { type: "LOGOUT" };
 
 const initialState: GameState = {
@@ -143,6 +145,17 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, isLoading: action.isLoading };
     case "SET_ERROR":
       return { ...state, error: action.error, isLoading: false };
+    case "LEAVE_GAME":
+      return {
+        ...state,
+        session: null,
+        turns: [],
+        inventory: null,
+        itemNotifications: [],
+        mood: "exploration",
+        view: "character_select",
+        error: null,
+      };
     case "LOGOUT":
       localStorage.removeItem("aetheria_user_id");
       return { ...initialState };

@@ -1,7 +1,14 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 .container {
   max-width: 900px;
   margin: 0 auto;
-  padding: var(--space-2xl) var(--space-lg);
+  padding: var(--space-xl) var(--space-lg);
+  flex: 1;
 }
 
 .title {
@@ -92,20 +99,3 @@
   border-radius: var(--radius-sm);
 }
 
-.backButton {
-  display: block;
-  margin: 0 auto;
-  padding: var(--space-sm) var(--space-lg);
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.backButton:hover {
-  border-color: var(--color-text-muted);
-  color: var(--color-text);
-}

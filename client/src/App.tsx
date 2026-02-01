@@ -5,6 +5,7 @@ import { CharacterSelect } from "./components/CharacterSelect.js";
 import { CharacterCreate } from "./components/CharacterCreate.js";
 import { ScenarioSelect } from "./components/ScenarioSelect.js";
 import { GameView } from "./components/GameView.js";
+import { Settings } from "./components/Settings.js";
 import styles from "./App.module.css";
 
 function AppContent() {
@@ -24,6 +25,7 @@ function AppContent() {
       {state.view === "character_create" && <CharacterCreate />}
       {state.view === "scenario_select" && <ScenarioSelect />}
       {state.view === "game" && <GameView />}
+      {state.view === "settings" && <Settings />}
     </div>
   );
 }

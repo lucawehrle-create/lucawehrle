@@ -1,0 +1,90 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-lg);
+  width: 100%;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.8rem;
+  margin-bottom: var(--space-xl);
+}
+
+.section {
+  margin-bottom: var(--space-xl);
+}
+
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  color: var(--mood-primary);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-sm) 0;
+}
+
+.row + .row {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.rowLabel {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.rowValue {
+  font-size: 0.9rem;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.rowValueMono {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-family: monospace;
+  background: var(--color-surface-alt);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutSection {
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-border);
+}
+
+.logoutButton {
+  width: 100%;
+  padding: var(--space-md);
+  background: transparent;
+  border: 1px solid #dc3545;
+  border-radius: var(--radius-md);
+  color: #dc3545;
+  font-size: 0.95rem;
+  font-family: var(--font-heading);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.logoutButton:hover {
+  background: rgba(220, 53, 69, 0.1);
+}

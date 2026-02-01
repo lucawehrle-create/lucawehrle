@@ -1,6 +1,7 @@
 import React from "react";
 import { useGame } from "../context/GameContext.js";
 import { createSession } from "../services/api.js";
+import { NavBar } from "./NavBar.js";
 import type { ScenarioTemplate } from "@aetheria/shared";
 import styles from "./ScenarioSelect.module.css";
 
@@ -52,47 +53,45 @@ export function ScenarioSelect() {
   }
 
   return (
-    <div className={styles.container}>
-      <h2 className={styles.title}>Waehle dein Abenteuer</h2>
-      <p className={styles.subtitle}>
-        Du spielst als <strong>{state.selectedCharacter?.name}</strong>
-      </p>
+    <div className={styles.page}>
+      <NavBar
+        back={{ label: "Heldenauswahl", onClick: () => dispatch({ type: "SET_VIEW", view: "character_select" }) }}
+      />
+      <div className={styles.container}>
+        <h2 className={styles.title}>Waehle dein Abenteuer</h2>
+        <p className={styles.subtitle}>
+          Du spielst als <strong>{state.selectedCharacter?.name}</strong>
+        </p>
 
-      <div className={styles.grid}>
-        {state.scenarios.map((scenario) => (
-          <button
-            key={scenario.id}
-            className={styles.card}
-            onClick={() => handleSelectScenario(scenario)}
-          >
-            <div className={styles.header}>
-              <span
-                className={styles.genre}
-                style={{ color: GENRE_COLORS[scenario.genre] ?? "#6c63ff" }}
-              >
-                {GENRE_LABELS[scenario.genre] ?? scenario.genre}
-              </span>
-              <span className={styles.difficulty}>
-                {DIFFICULTY_LABELS[scenario.difficulty]}
-              </span>
-            </div>
-            <h3 className={styles.scenarioTitle}>{scenario.title}</h3>
-            <p className={styles.description}>{scenario.description}</p>
-            <div className={styles.tags}>
-              {scenario.tags.map((tag) => (
-                <span key={tag} className={styles.tag}>{tag}</span>
-              ))}
-            </div>
-          </button>
-        ))}
+        <div className={styles.grid}>
+          {state.scenarios.map((scenario) => (
+            <button
+              key={scenario.id}
+              className={styles.card}
+              onClick={() => handleSelectScenario(scenario)}
+            >
+              <div className={styles.header}>
+                <span
+                  className={styles.genre}
+                  style={{ color: GENRE_COLORS[scenario.genre] ?? "#6c63ff" }}
+                >
+                  {GENRE_LABELS[scenario.genre] ?? scenario.genre}
+                </span>
+                <span className={styles.difficulty}>
+                  {DIFFICULTY_LABELS[scenario.difficulty]}
+                </span>
+              </div>
+              <h3 className={styles.scenarioTitle}>{scenario.title}</h3>
+              <p className={styles.description}>{scenario.description}</p>
+              <div className={styles.tags}>
+                {scenario.tags.map((tag) => (
+                  <span key={tag} className={styles.tag}>{tag}</span>
+                ))}
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
-
-      <button
-        className={styles.backButton}
-        onClick={() => dispatch({ type: "SET_VIEW", view: "character_select" })}
-      >
-        Zurueck zur Heldenauswahl
-      </button>
     </div>
   );
 }

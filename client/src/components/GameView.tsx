@@ -37,6 +37,7 @@ export function GameView() {
   const [freeText, setFreeText] = useState("");
   const [showInventory, setShowInventory] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const narrativeEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -166,6 +167,13 @@ export function GameView() {
       {/* Header bar */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
+          <button
+            className={styles.menuButton}
+            onClick={() => setShowLeaveConfirm(true)}
+            title="Hauptmenue"
+          >
+            {"\u2190"}
+          </button>
           <div className={styles.sessionInfo}>
             <h2 className={styles.sessionTitle}>{state.session?.title}</h2>
             <span className={styles.turnCounter}>Zug {state.session?.turnCount ?? 0}</span>
@@ -184,6 +192,13 @@ export function GameView() {
           </button>
           <button className={styles.iconButton} onClick={handleScan} title="Objekt scannen (AR)">
             <span className={styles.btnIcon}>{"\uD83D\uDCF7"}</span> Scan
+          </button>
+          <button
+            className={styles.iconButton}
+            onClick={() => dispatch({ type: "SET_VIEW", view: "settings" })}
+            title="Einstellungen"
+          >
+            <span className={styles.btnIcon}>{"\u2699"}</span>
           </button>
           <div className={styles.energyBadge}>
             <span className={styles.energyIcon}>{"\u26A1"}</span>
@@ -284,6 +299,32 @@ export function GameView() {
               onDismiss={() => dispatch({ type: "DISMISS_NOTIFICATION", id: notif.id })}
             />
           ))}
+        </div>
+      )}
+
+      {/* Leave confirmation dialog */}
+      {showLeaveConfirm && (
+        <div className={styles.dialogOverlay} onClick={() => setShowLeaveConfirm(false)}>
+          <div className={styles.dialog} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.dialogTitle}>Abenteuer verlassen?</h3>
+            <p className={styles.dialogText}>
+              Dein Fortschritt in dieser Sitzung geht verloren. Bist du sicher?
+            </p>
+            <div className={styles.dialogActions}>
+              <button
+                className={styles.dialogCancel}
+                onClick={() => setShowLeaveConfirm(false)}
+              >
+                Weiterspielen
+              </button>
+              <button
+                className={styles.dialogConfirm}
+                onClick={() => dispatch({ type: "LEAVE_GAME" })}
+              >
+                Verlassen
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

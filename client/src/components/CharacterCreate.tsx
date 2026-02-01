@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useGame } from "../context/GameContext.js";
 import { createCharacter, getCharacters } from "../services/api.js";
+import { NavBar } from "./NavBar.js";
 import type { CreateCharacterRequest } from "@aetheria/shared";
 import styles from "./CharacterCreate.module.css";
 
@@ -216,7 +217,11 @@ export function CharacterCreate() {
   const buildLabel = BUILDS.find((b) => b.value === build)?.label ?? build;
 
   return (
-    <div className={styles.container}>
+    <div className={styles.page}>
+      <NavBar
+        back={{ label: "Heldenauswahl", onClick: () => dispatch({ type: "SET_VIEW", view: "character_select" }) }}
+      />
+      <div className={styles.container}>
       <h2 className={styles.title}>Erschaffe deinen Helden</h2>
 
       <form className={styles.form} onSubmit={handleCreate}>
@@ -445,18 +450,12 @@ export function CharacterCreate() {
         </div>
 
         <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.backButton}
-            onClick={() => dispatch({ type: "SET_VIEW", view: "character_select" })}
-          >
-            Zurueck
-          </button>
           <button type="submit" className={styles.createButton}>
             Charakter erstellen
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 }

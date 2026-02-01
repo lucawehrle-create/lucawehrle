@@ -160,6 +160,14 @@
   color: var(--color-text);
 }
 
+.paragraph {
+  margin: 0 0 0.6em 0;
+}
+
+.paragraph:last-child {
+  margin-bottom: 0;
+}
+
 .diceRolls {
   display: flex;
   flex-wrap: wrap;
@@ -374,4 +382,19 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 0.85rem;
+}
+
+/* Loading flavor text */
+.loadingFlavor {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: 0.85rem;
+  margin-top: var(--space-sm);
+  animation: fadeInSlow 0.6s ease;
+}
+
+@keyframes fadeInSlow {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

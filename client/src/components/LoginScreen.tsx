@@ -38,7 +38,7 @@ export function LoginScreen() {
       await loadUserData(result.data.id);
       dispatch({ type: "SET_VIEW", view: "character_select" });
     } else {
-      dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Registration failed" });
+      dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Registrierung fehlgeschlagen" });
     }
     dispatch({ type: "SET_LOADING", isLoading: false });
   }
@@ -61,20 +61,20 @@ export function LoginScreen() {
     <div className={styles.container}>
       <div className={styles.content}>
         <h1 className={styles.title}>Aetheria AI</h1>
-        <p className={styles.subtitle}>Infinite Immersive RPG</p>
+        <p className={styles.subtitle}>Unendliches Immersives RPG</p>
         <p className={styles.tagline}>
-          Every story is unique. Every choice matters. Powered by AI.
+          Jede Geschichte ist einzigartig. Jede Entscheidung zaehlt. Angetrieben von KI.
         </p>
 
         {!isRegistering ? (
           <button className={styles.enterButton} onClick={handleLogin}>
-            Enter the Realm
+            Betritt das Reich
           </button>
         ) : (
           <form className={styles.form} onSubmit={handleRegister}>
             <input
               type="text"
-              placeholder="Choose your name, adventurer..."
+              placeholder="Waehle deinen Namen, Abenteurer..."
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className={styles.input}
@@ -84,14 +84,14 @@ export function LoginScreen() {
             />
             <input
               type="email"
-              placeholder="Your email (for save games)"
+              placeholder="Deine E-Mail (fuer Spielstaende)"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={styles.input}
               required
             />
             <button type="submit" className={styles.enterButton}>
-              Begin Your Journey
+              Beginne deine Reise
             </button>
           </form>
         )}

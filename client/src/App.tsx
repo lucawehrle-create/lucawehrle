@@ -15,7 +15,7 @@ function AppContent() {
       {state.isLoading && (
         <div className={styles.loadingOverlay}>
           <div className={styles.spinner} />
-          <p className={styles.loadingText}>Weaving the threads of fate...</p>
+          <p className={styles.loadingText}>Die Faeden des Schicksals werden gesponnen...</p>
         </div>
       )}
 

@@ -12,11 +12,19 @@ const GENRE_COLORS: Record<string, string> = {
   comedy: "#ffd43b",
 };
 
+const GENRE_LABELS: Record<string, string> = {
+  fantasy: "Fantasy",
+  horror: "Horror",
+  scifi: "Sci-Fi",
+  mystery: "Mysterium",
+  comedy: "Komoedie",
+};
+
 const DIFFICULTY_LABELS: Record<string, string> = {
-  easy: "Novice",
-  medium: "Adventurer",
+  easy: "Anfaenger",
+  medium: "Abenteurer",
   hard: "Veteran",
-  legendary: "Legendary",
+  legendary: "Legendaer",
 };
 
 export function ScenarioSelect() {
@@ -38,16 +46,16 @@ export function ScenarioSelect() {
         turn: result.data.turn,
       });
     } else {
-      dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Failed to start session" });
+      dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Sitzung konnte nicht gestartet werden" });
     }
     dispatch({ type: "SET_LOADING", isLoading: false });
   }
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>Choose Your Adventure</h2>
+      <h2 className={styles.title}>Waehle dein Abenteuer</h2>
       <p className={styles.subtitle}>
-        Playing as <strong>{state.selectedCharacter?.name}</strong>
+        Du spielst als <strong>{state.selectedCharacter?.name}</strong>
       </p>
 
       <div className={styles.grid}>
@@ -62,7 +70,7 @@ export function ScenarioSelect() {
                 className={styles.genre}
                 style={{ color: GENRE_COLORS[scenario.genre] ?? "#6c63ff" }}
               >
-                {scenario.genre}
+                {GENRE_LABELS[scenario.genre] ?? scenario.genre}
               </span>
               <span className={styles.difficulty}>
                 {DIFFICULTY_LABELS[scenario.difficulty]}
@@ -83,7 +91,7 @@ export function ScenarioSelect() {
         className={styles.backButton}
         onClick={() => dispatch({ type: "SET_VIEW", view: "character_select" })}
       >
-        Back to Character Selection
+        Zurueck zur Heldenauswahl
       </button>
     </div>
   );

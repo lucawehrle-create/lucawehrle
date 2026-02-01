@@ -3,6 +3,16 @@ import { useGame } from "../context/GameContext.js";
 import type { Character } from "@aetheria/shared";
 import styles from "./CharacterSelect.module.css";
 
+const RACE_LABELS: Record<string, string> = {
+  human: "Mensch", elf: "Elf", dwarf: "Zwerg", halfling: "Halbling",
+  orc: "Ork", tiefling: "Tiefling", dragonborn: "Drachenblut",
+};
+
+const CLASS_LABELS: Record<string, string> = {
+  warrior: "Krieger", mage: "Magier", rogue: "Schurke", cleric: "Kleriker",
+  ranger: "Waldlaeufer", bard: "Barde", paladin: "Paladin",
+};
+
 export function CharacterSelect() {
   const { state, dispatch } = useGame();
 
@@ -17,8 +27,8 @@ export function CharacterSelect() {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>Choose Your Hero</h2>
-      <p className={styles.subtitle}>Select an existing character or forge a new one</p>
+      <h2 className={styles.title}>Waehle deinen Helden</h2>
+      <p className={styles.subtitle}>Waehle einen bestehenden Charakter oder erschaffe einen neuen</p>
 
       <div className={styles.grid}>
         {state.characters.map((char) => (
@@ -34,20 +44,20 @@ export function CharacterSelect() {
             </div>
             <h3 className={styles.charName}>{char.name}</h3>
             <p className={styles.charInfo}>
-              {char.race} {char.characterClass}
+              {RACE_LABELS[char.race] ?? char.race} {CLASS_LABELS[char.characterClass] ?? char.characterClass}
             </p>
-            <p className={styles.charLevel}>Level {char.level}</p>
+            <p className={styles.charLevel}>Stufe {char.level}</p>
             <div className={styles.stats}>
               <span>HP {char.hitPoints}/{char.maxHitPoints}</span>
-              <span>AC {char.armorClass}</span>
+              <span>RK {char.armorClass}</span>
             </div>
           </button>
         ))}
 
         <button className={styles.createCard} onClick={handleCreateNew}>
           <div className={styles.createIcon}>+</div>
-          <h3 className={styles.charName}>Create New</h3>
-          <p className={styles.charInfo}>Forge a new hero</p>
+          <h3 className={styles.charName}>Neu erstellen</h3>
+          <p className={styles.charInfo}>Erschaffe einen neuen Helden</p>
         </button>
       </div>
     </div>

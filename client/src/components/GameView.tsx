@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useGame } from "../context/GameContext.js";
 import { submitAction, scanObject } from "../services/api.js";
 import type { GameTurn, ActionOption } from "@aetheria/shared";
@@ -224,9 +224,12 @@ export function GameView() {
         </form>
 
         {isProcessing && (
-          <div className={styles.loadingBar}>
-            <div className={styles.loadingProgress} />
-          </div>
+          <>
+            <div className={styles.loadingBar}>
+              <div className={styles.loadingProgress} />
+            </div>
+            <LoadingFlavor />
+          </>
         )}
       </div>
 
@@ -242,6 +245,9 @@ export function GameView() {
 }
 
 function TurnDisplay({ turn, isLatest }: { turn: GameTurn; isLatest: boolean }) {
+  // Split narrative into paragraphs for better readability
+  const paragraphs = turn.narrative.split(/\n\n+/).filter(Boolean);
+
   return (
     <div className={`${styles.turn} ${isLatest ? styles.latestTurn : ""}`}>
       {/* Player action (if not the first turn) */}
@@ -260,21 +266,41 @@ function TurnDisplay({ turn, isLatest }: { turn: GameTurn; isLatest: boolean }) 
         </div>
       )}
 
-      {/* Narrative text - typewriter for latest turn only */}
+      {/* Narrative text - typewriter for latest turn, paragraphs for older */}
       <div className={styles.narrative}>
         {isLatest ? (
           <Typewriter text={turn.narrative} speed={16} />
         ) : (
-          turn.narrative
+          paragraphs.map((p, i) => <p key={i} className={styles.paragraph}>{p}</p>)
         )}
       </div>
 
       {/* Scene image */}
       {turn.imageUrl && (
         <div className={styles.sceneImage}>
-          <img src={turn.imageUrl} alt="Scene" loading="lazy" />
+          <img src={turn.imageUrl} alt="Szene" loading="lazy" />
         </div>
       )}
     </div>
   );
+}
+
+const LOADING_MESSAGES = [
+  "Der Dungeon Master wuerfelt im Verborgenen...",
+  "Die Schicksalsfaeden werden neu verwoben...",
+  "Arkane Energien formen die naechste Szene...",
+  "Die Welt reagiert auf deine Entscheidung...",
+  "Alte Magie erwacht zum Leben...",
+  "Der Pfad deines Abenteuers entfaltet sich...",
+  "Etwas ruehrt sich in der Dunkelheit...",
+  "Das Schicksal haelt den Atem an...",
+  "Die Geschichte wird weitergesponnen...",
+];
+
+function LoadingFlavor() {
+  const message = useMemo(
+    () => LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)],
+    [],
+  );
+  return <p className={styles.loadingFlavor}>{message}</p>;
 }

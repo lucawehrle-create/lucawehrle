@@ -1,10 +1,18 @@
 import dotenv from "dotenv";
 
-// .env laden (Hauptdatei), dann .env.example als Fallback
-// So funktioniert der Key, egal in welcher Datei er steht.
-// Werte aus .env haben Vorrang – .env.example ueberschreibt nichts.
-dotenv.config();                            // .env
-dotenv.config({ path: ".env.example" });    // Fallback
+// .env laden, dann .env.example als Fallback fuer leere Werte.
+// dotenv ueberschreibt existierende Keys nicht – auch nicht leere.
+// Deshalb pruefen wir manuell: wenn ein Key in .env leer ist,
+// wird der Wert aus .env.example eingesetzt.
+dotenv.config();
+const example = dotenv.config({ path: ".env.example" });
+if (example.parsed) {
+  for (const [key, value] of Object.entries(example.parsed)) {
+    if (!process.env[key]?.trim() && value.trim()) {
+      process.env[key] = value;
+    }
+  }
+}
 
 import { createApp } from "./app.js";
 

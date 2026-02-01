@@ -122,8 +122,8 @@ export async function getSession(
 export async function submitAction(
   sessionId: string,
   action: SubmitActionRequest["action"]
-): Promise<ApiResponse<{ turn: GameTurn; events: GameEvent[]; inventory: Inventory }>> {
-  return request<{ turn: GameTurn; events: GameEvent[]; inventory: Inventory }>(
+): Promise<ApiResponse<{ turn: GameTurn; events: GameEvent[]; inventory: Inventory; character: Character; xpGained: number }>> {
+  return request<{ turn: GameTurn; events: GameEvent[]; inventory: Inventory; character: Character; xpGained: number }>(
     `/game/sessions/${sessionId}/action`,
     {
       method: "POST",

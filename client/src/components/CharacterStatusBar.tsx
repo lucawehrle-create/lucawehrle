@@ -1,5 +1,6 @@
 import React from "react";
 import type { Character } from "@aetheria/shared";
+import { getXPProgress, getXPForNextLevel } from "@aetheria/shared";
 import { useGame } from "../context/GameContext.js";
 import { useCharacterPortrait } from "../hooks/useImagePolling.js";
 import styles from "./CharacterStatusBar.module.css";
@@ -24,6 +25,11 @@ export function CharacterStatusBar({ character }: CharacterStatusBarProps) {
   const hpColor = hpPercent > 60 ? "#51cf66" : hpPercent > 30 ? "#ffd43b" : "#dc3545";
   const icon = CLASS_ICONS[character.characterClass] ?? "\u2B22";
 
+  const xpProgress = getXPProgress(character.experience, character.level);
+  const xpPercent = Math.round(xpProgress * 100);
+  const nextLevelXP = getXPForNextLevel(character.level);
+  const isMaxLevel = nextLevelXP === null;
+
   const portraitUrl = useCharacterPortrait(
     state.user?.id,
     character.id,
@@ -40,6 +46,15 @@ export function CharacterStatusBar({ character }: CharacterStatusBarProps) {
       <div className={styles.nameBlock}>
         <span className={styles.name}>{character.name}</span>
         <span className={styles.meta}>Lv.{character.level} {character.race} {character.characterClass}</span>
+        <div className={styles.xpBarOuter} title={isMaxLevel ? "Max Level" : `${character.experience} / ${nextLevelXP} XP`}>
+          <div
+            className={styles.xpBarInner}
+            style={{ width: `${isMaxLevel ? 100 : xpPercent}%` }}
+          />
+        </div>
+        <span className={styles.xpText}>
+          {isMaxLevel ? "MAX" : `${character.experience} / ${nextLevelXP} XP`}
+        </span>
       </div>
       <div className={styles.hpBlock}>
         <div className={styles.hpBarOuter}>

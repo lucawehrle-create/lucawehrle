@@ -533,6 +533,19 @@
   font-size: 0.95rem;
 }
 
+/* Level-up notification golden glow */
+.levelUpNotification {
+  border-color: #ffd43b !important;
+  background: linear-gradient(135deg, var(--color-surface) 60%, rgba(255, 212, 59, 0.1));
+  box-shadow: 0 4px 20px rgba(255, 212, 59, 0.3), 0 0 30px rgba(255, 212, 59, 0.1);
+  animation: slideInRight 0.4s ease, levelUpPulse 1.5s ease-in-out 0.4s 2;
+}
+
+@keyframes levelUpPulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(255, 212, 59, 0.3); }
+  50% { box-shadow: 0 4px 30px rgba(255, 212, 59, 0.6), 0 0 40px rgba(255, 212, 59, 0.2); }
+}
+
 /* Menu / back button in game header */
 .menuButton {
   background: none;

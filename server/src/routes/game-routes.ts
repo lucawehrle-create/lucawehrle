@@ -7,8 +7,10 @@ import type { ScannerService } from "../services/scanner/scanner-service.js";
 import type { AIService } from "../services/ai/ai-service.js";
 import type {
   ApiResponse,
+  Character,
   GameSession,
   GameTurn,
+  GameEvent,
   PlayerAction,
   CreateSessionRequest,
   SubmitActionRequest,
@@ -19,6 +21,59 @@ import type {
   ItemRarity,
   ItemEffect,
 } from "@aetheria/shared";
+import { LEVEL_THRESHOLDS } from "@aetheria/shared";
+
+/**
+ * Calculate XP reward for a turn based on events and dice rolls.
+ */
+function calculateXPReward(events: GameEvent[], turn: GameTurn): number {
+  let xp = 25; // Base XP per turn
+
+  for (const event of events) {
+    switch (event.type) {
+      case "combat_end": xp += 50; break;
+      case "combat_start": xp += 10; break;
+      case "quest_complete": xp += 150; break;
+      case "quest_start": xp += 25; break;
+      case "npc_met": xp += 15; break;
+      case "item_acquired": xp += 10; break;
+    }
+  }
+
+  // Bonus XP for successful dice rolls
+  for (const roll of turn.diceRolls) {
+    if (roll.success) xp += 15;
+    if (roll.criticalHit) xp += 30;
+  }
+
+  return xp;
+}
+
+/**
+ * Check if character should level up and apply stat increases.
+ * Returns the new level if leveled up, or null.
+ */
+function checkAndApplyLevelUp(character: Character): number | null {
+  const nextThreshold = LEVEL_THRESHOLDS[character.level + 1];
+  if (nextThreshold === undefined) return null; // Max level
+  if (character.experience < nextThreshold) return null;
+
+  character.level += 1;
+
+  // HP increase per level (constitution-based)
+  const conMod = Math.floor((character.abilities.constitution - 10) / 2);
+  const hpGain = Math.max(1, 6 + conMod); // d6 average + con modifier, minimum 1
+  character.maxHitPoints += hpGain;
+  character.hitPoints = character.maxHitPoints; // Full heal on level up
+
+  // Small AC boost every 4 levels
+  if (character.level % 4 === 0) {
+    character.armorClass += 1;
+  }
+
+  character.updatedAt = new Date().toISOString();
+  return character.level;
+}
 
 export function createGameRoutes(
   store: GameStore,
@@ -293,11 +348,34 @@ export function createGameRoutes(
         }
       }
 
+      // Award XP and check for level-up
+      const xpGained = calculateXPReward(result.events, result.turn);
+      const prevLevel = character.level;
+      character.experience += xpGained;
+      const newLevel = checkAndApplyLevelUp(character);
+      store.updateCharacter(character);
+
+      // If leveled up, inject a level_up event
+      if (newLevel !== null) {
+        result.events.push({
+          type: "level_up",
+          payload: {
+            newLevel,
+            previousLevel: prevLevel,
+            xpGained,
+            totalXP: character.experience,
+            hpGained: character.maxHitPoints - (character.maxHitPoints - (6 + Math.max(0, Math.floor((character.abilities.constitution - 10) / 2)))),
+          },
+          turnId: result.turn.id,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
       const updatedInventory = store.getInventory(character.id)!;
 
-      const response: ApiResponse<{ turn: GameTurn; events: typeof result.events; inventory: Inventory }> = {
+      const response: ApiResponse<{ turn: GameTurn; events: typeof result.events; inventory: Inventory; character: Character; xpGained: number }> = {
         success: true,
-        data: { turn: result.turn, events: result.events, inventory: updatedInventory },
+        data: { turn: result.turn, events: result.events, inventory: updatedInventory, character, xpGained },
       };
       res.json(response);
     } catch (error) {

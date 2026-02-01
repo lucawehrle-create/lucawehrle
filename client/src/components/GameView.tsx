@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useGame } from "../context/GameContext.js";
-import type { ItemNotification } from "../context/GameContext.js";
+import type { GameNotification } from "../context/GameContext.js";
 import { submitAction, scanObject } from "../services/api.js";
 import { useSceneImage } from "../hooks/useImagePolling.js";
 import type { GameTurn, ActionOption } from "@aetheria/shared";
@@ -23,15 +23,6 @@ const ACTION_TYPE_ICONS: Record<string, string> = {
   stealth: "\uD83E\uDD77",
 };
 
-const RARITY_COLORS: Record<string, string> = {
-  common: "#adb5bd",
-  uncommon: "#51cf66",
-  rare: "#339af0",
-  epic: "#b197fc",
-  legendary: "#ffd43b",
-  artifact: "#ff6b6b",
-};
-
 export function GameView() {
   const { state, dispatch } = useGame();
   const [freeText, setFreeText] = useState("");
@@ -47,14 +38,14 @@ export function GameView() {
     narrativeEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.turns.length]);
 
-  // Auto-dismiss item notifications after 5 seconds
+  // Auto-dismiss notifications after 5 seconds
   useEffect(() => {
-    if (state.itemNotifications.length === 0) return;
+    if (state.notifications.length === 0) return;
     const timer = setTimeout(() => {
-      dispatch({ type: "DISMISS_NOTIFICATION", id: state.itemNotifications[0].id });
+      dispatch({ type: "DISMISS_NOTIFICATION", id: state.notifications[0].id });
     }, 5000);
     return () => clearTimeout(timer);
-  }, [state.itemNotifications, dispatch]);
+  }, [state.notifications, dispatch]);
 
   // Keyboard shortcuts: 1-4 for action options, I for inventory
   const handleKeyDown = useCallback(
@@ -95,14 +86,14 @@ export function GameView() {
 
     if (result.success && result.data) {
       dispatch({ type: "ADD_TURN", turn: result.data.turn });
-      // Process events and update inventory
-      if (result.data.events.length > 0 || result.data.inventory) {
-        dispatch({
-          type: "PROCESS_EVENTS",
-          events: result.data.events,
-          inventory: result.data.inventory,
-        });
-      }
+      // Process events, update inventory, character XP
+      dispatch({
+        type: "PROCESS_EVENTS",
+        events: result.data.events,
+        inventory: result.data.inventory,
+        character: result.data.character,
+        xpGained: result.data.xpGained,
+      });
     } else {
       dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Action failed" });
     }
@@ -124,14 +115,14 @@ export function GameView() {
 
     if (result.success && result.data) {
       dispatch({ type: "ADD_TURN", turn: result.data.turn });
-      // Process events and update inventory
-      if (result.data.events.length > 0 || result.data.inventory) {
-        dispatch({
-          type: "PROCESS_EVENTS",
-          events: result.data.events,
-          inventory: result.data.inventory,
-        });
-      }
+      // Process events, update inventory, character XP
+      dispatch({
+        type: "PROCESS_EVENTS",
+        events: result.data.events,
+        inventory: result.data.inventory,
+        character: result.data.character,
+        xpGained: result.data.xpGained,
+      });
     } else {
       dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Action failed" });
     }
@@ -289,11 +280,11 @@ export function GameView() {
         )}
       </div>
 
-      {/* Item notifications */}
-      {state.itemNotifications.length > 0 && (
+      {/* Game notifications (items, XP, level-up) */}
+      {state.notifications.length > 0 && (
         <div className={styles.notificationStack}>
-          {state.itemNotifications.map((notif) => (
-            <ItemNotificationToast
+          {state.notifications.map((notif) => (
+            <NotificationToast
               key={notif.id}
               notification={notif}
               onDismiss={() => dispatch({ type: "DISMISS_NOTIFICATION", id: notif.id })}
@@ -339,29 +330,35 @@ export function GameView() {
   );
 }
 
-function ItemNotificationToast({
+const NOTIF_ICONS: Record<GameNotification["type"], string> = {
+  item_acquired: "\u2728",
+  item_lost: "\uD83D\uDDD1\uFE0F",
+  xp_gained: "\u2B50",
+  level_up: "\uD83C\uDF89",
+};
+
+function NotificationToast({
   notification,
   onDismiss,
 }: {
-  notification: ItemNotification;
+  notification: GameNotification;
   onDismiss: () => void;
 }) {
-  const color = RARITY_COLORS[notification.rarity ?? "common"] ?? "#adb5bd";
-  const isAcquired = notification.type === "acquired";
+  const isLevelUp = notification.type === "level_up";
 
   return (
     <div
-      className={styles.itemNotification}
-      style={{ borderLeftColor: color }}
+      className={`${styles.itemNotification} ${isLevelUp ? styles.levelUpNotification : ""}`}
+      style={{ borderLeftColor: notification.color ?? "#adb5bd" }}
       onClick={onDismiss}
     >
-      <span className={styles.notifIcon}>{isAcquired ? "\u2728" : "\uD83D\uDDD1\uFE0F"}</span>
+      <span className={styles.notifIcon}>{NOTIF_ICONS[notification.type]}</span>
       <div className={styles.notifContent}>
-        <span className={styles.notifLabel}>
-          {isAcquired ? "Gegenstand erhalten" : "Gegenstand verloren"}
-        </span>
-        <span className={styles.notifName} style={{ color }}>
-          {notification.itemName}
+        {notification.subtext && (
+          <span className={styles.notifLabel}>{notification.subtext}</span>
+        )}
+        <span className={styles.notifName} style={{ color: notification.color ?? "#adb5bd" }}>
+          {notification.text}
         </span>
       </div>
     </div>

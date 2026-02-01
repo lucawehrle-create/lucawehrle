@@ -90,3 +90,19 @@ export const LEVEL_THRESHOLDS: Record<number, number> = {
   19: 305000,
   20: 355000,
 };
+
+/** Get the XP needed for the next level. Returns null if max level. */
+export function getXPForNextLevel(level: number): number | null {
+  const next = LEVEL_THRESHOLDS[level + 1];
+  return next !== undefined ? next : null;
+}
+
+/** Get XP progress as a fraction (0-1) toward the next level. */
+export function getXPProgress(experience: number, level: number): number {
+  const currentThreshold = LEVEL_THRESHOLDS[level] ?? 0;
+  const nextThreshold = LEVEL_THRESHOLDS[level + 1];
+  if (nextThreshold === undefined) return 1; // Max level
+  const range = nextThreshold - currentThreshold;
+  if (range <= 0) return 1;
+  return Math.min(1, (experience - currentThreshold) / range);
+}

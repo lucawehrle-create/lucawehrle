@@ -147,14 +147,16 @@ export class DungeonMaster {
         const difficulty = inferDifficulty(selectedOption, turnNumber);
 
         if (selectedOption.type === "combat") {
-          const combat = resolveCombatAttack(character, 15, selectedOption.text);
+          // Scale enemy AC with character level (13 at L1, up to 18 at L20)
+          const enemyAC = 13 + Math.floor(character.level / 4);
+          const combat = resolveCombatAttack(character, enemyAC, selectedOption.text);
           diceRolls.push(combat.attackResult);
           if (combat.damageResult) {
             diceRolls.push(combat.damageResult);
           }
           mechanicsContext = combat.attackResult.success
-            ? `[ATTACK HIT${combat.attackResult.criticalHit ? " - CRITICAL!" : ""}] Rolled ${combat.attackResult.total} vs AC 15. ${combat.damageResult ? `Dealt ${combat.damageResult.total} damage.` : ""}`
-            : `[ATTACK MISSED${combat.attackResult.criticalFail ? " - CRITICAL FAIL!" : ""}] Rolled ${combat.attackResult.total} vs AC 15.`;
+            ? `[ATTACK HIT${combat.attackResult.criticalHit ? " - CRITICAL!" : ""}] Rolled ${combat.attackResult.total} vs AC ${enemyAC}. ${combat.damageResult ? `Dealt ${combat.damageResult.total} damage.` : ""}`
+            : `[ATTACK MISSED${combat.attackResult.criticalFail ? " - CRITICAL FAIL!" : ""}] Rolled ${combat.attackResult.total} vs AC ${enemyAC}.`;
         } else {
           const check = resolveSkillCheck(character, ability, difficulty, selectedOption.text);
           diceRolls.push(check);

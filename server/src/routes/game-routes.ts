@@ -297,6 +297,31 @@ export function createGameRoutes(
         // Image generation failure is non-blocking
       });
 
+      // Enrich combat events with generated enemy stats
+      const enemyAC = 13 + Math.floor(character.level / 4);
+      const hasCombatStart = result.events.some(e => e.type === "combat_start");
+      for (const event of result.events) {
+        if (event.type === "combat_start") {
+          const p = event.payload as Record<string, unknown>;
+          const baseHp = 15 + character.level * 8;
+          if (p.enemyHp === undefined) p.enemyHp = baseHp;
+          if (p.enemyMaxHp === undefined) p.enemyMaxHp = baseHp;
+          if (p.enemyAc === undefined) p.enemyAc = enemyAC;
+        }
+      }
+
+      // If combat dice rolls exist with combat mood but no combat_start event, inject one
+      const hasCombatRolls = result.turn.diceRolls.some(r => r.diceType === "d20" && r.success !== undefined);
+      if (hasCombatRolls && result.turn.mood === "combat" && !hasCombatStart) {
+        const baseHp = 15 + character.level * 8;
+        result.events.unshift({
+          type: "combat_start",
+          payload: { enemy: "Gegner", enemyHp: baseHp, enemyMaxHp: baseHp, enemyAc: enemyAC },
+          turnId: result.turn.id,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
       // Process inventory events from AI
       for (const event of result.events) {
         if (event.type === "item_acquired") {

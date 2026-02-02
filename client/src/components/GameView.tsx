@@ -9,6 +9,7 @@ import { InventoryPanel } from "./InventoryPanel.js";
 import { Typewriter } from "./Typewriter.js";
 import { AtmosphericEffects } from "./AtmosphericEffects.js";
 import { CharacterStatusBar } from "./CharacterStatusBar.js";
+import { CombatHUD } from "./CombatHUD.js";
 import { MoodTransition } from "./MoodTransition.js";
 import styles from "./GameView.module.css";
 
@@ -86,13 +87,13 @@ export function GameView() {
 
     if (result.success && result.data) {
       dispatch({ type: "ADD_TURN", turn: result.data.turn });
-      // Process events, update inventory, character XP
       dispatch({
         type: "PROCESS_EVENTS",
         events: result.data.events,
         inventory: result.data.inventory,
         character: result.data.character,
         xpGained: result.data.xpGained,
+        diceRolls: result.data.turn.diceRolls,
       });
     } else {
       dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Action failed" });
@@ -115,13 +116,13 @@ export function GameView() {
 
     if (result.success && result.data) {
       dispatch({ type: "ADD_TURN", turn: result.data.turn });
-      // Process events, update inventory, character XP
       dispatch({
         type: "PROCESS_EVENTS",
         events: result.data.events,
         inventory: result.data.inventory,
         character: result.data.character,
         xpGained: result.data.xpGained,
+        diceRolls: result.data.turn.diceRolls,
       });
     } else {
       dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Action failed" });
@@ -204,6 +205,14 @@ export function GameView() {
       <div className={styles.mainArea}>
         {/* Narrative scroll */}
         <div className={styles.narrativeScroll}>
+          {/* Combat HUD */}
+          {state.combatState && state.selectedCharacter && (
+            <CombatHUD
+              combatState={state.combatState}
+              character={state.selectedCharacter}
+            />
+          )}
+
           {state.turns.map((turn, index) => (
             <TurnDisplay
               key={turn.id}

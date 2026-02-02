@@ -87,6 +87,14 @@ export interface ScenarioTemplate {
   creatorId?: string;
 }
 
+/** Enemy combatant info for the combat HUD */
+export interface CombatantInfo {
+  name: string;
+  hp: number;
+  maxHp: number;
+  ac: number;
+}
+
 /** Event fired when game state changes */
 export interface GameEvent {
   type:

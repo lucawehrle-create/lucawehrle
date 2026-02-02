@@ -8,6 +8,8 @@ import type {
   SceneMood,
   ScenarioTemplate,
   GameEvent,
+  DiceRoll,
+  CombatantInfo,
 } from "@aetheria/shared";
 
 /** A notification about game events (items, XP, level-up) */
@@ -40,6 +42,7 @@ export interface GameState {
   turns: GameTurn[];
   inventory: Inventory | null;
   notifications: GameNotification[];
+  combatState: CombatantInfo | null;
   mood: SceneMood;
   isLoading: boolean;
   error: string | null;
@@ -57,7 +60,7 @@ export type GameAction =
   | { type: "UPDATE_SESSION"; session: GameSession }
   | { type: "UPDATE_CHARACTER"; character: Character }
   | { type: "SET_INVENTORY"; inventory: Inventory }
-  | { type: "PROCESS_EVENTS"; events: GameEvent[]; inventory: Inventory; character: Character; xpGained: number }
+  | { type: "PROCESS_EVENTS"; events: GameEvent[]; inventory: Inventory; character: Character; xpGained: number; diceRolls: DiceRoll[] }
   | { type: "DISMISS_NOTIFICATION"; id: string }
   | { type: "SET_MOOD"; mood: SceneMood }
   | { type: "SET_LOADING"; isLoading: boolean }
@@ -84,6 +87,7 @@ const initialState: GameState = {
   turns: [],
   inventory: null,
   notifications: [],
+  combatState: null,
   mood: "exploration",
   isLoading: false,
   error: null,
@@ -166,11 +170,40 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         });
       }
 
+      // Track combat state
+      let newCombatState = state.combatState;
+      for (const evt of action.events) {
+        if (evt.type === "combat_start") {
+          const p = evt.payload as Record<string, unknown>;
+          newCombatState = {
+            name: String(p.enemy ?? "Gegner"),
+            hp: Number(p.enemyHp ?? 30),
+            maxHp: Number(p.enemyMaxHp ?? 30),
+            ac: Number(p.enemyAc ?? 15),
+          };
+        } else if (evt.type === "combat_end") {
+          newCombatState = null;
+        }
+      }
+
+      // Subtract damage from enemy HP when in combat
+      if (newCombatState) {
+        for (const roll of action.diceRolls) {
+          if (roll.purpose.toLowerCase().includes("damage") && roll.total > 0) {
+            newCombatState = {
+              ...newCombatState,
+              hp: Math.max(0, newCombatState.hp - roll.total),
+            };
+          }
+        }
+      }
+
       return {
         ...state,
         inventory: action.inventory,
         selectedCharacter: action.character,
         notifications: [...state.notifications, ...newNotifs],
+        combatState: newCombatState,
       };
     }
     case "DISMISS_NOTIFICATION":
@@ -191,6 +224,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         turns: [],
         inventory: null,
         notifications: [],
+        combatState: null,
         mood: "exploration",
         view: "character_select",
         error: null,

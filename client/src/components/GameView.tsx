@@ -43,6 +43,8 @@ export function GameView() {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const narrativeEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // Guard against duplicate submissions (e.g. rapid double-click before state update)
+  const lastSubmitRef = useRef<string | null>(null);
 
   const currentTurn = state.turns[state.turns.length - 1];
 
@@ -114,6 +116,10 @@ export function GameView() {
 
   async function handleOptionClick(option: ActionOption) {
     if (isProcessing || !state.session) return;
+    // Deduplicate rapid clicks on the same option
+    const submitKey = `option:${option.id}`;
+    if (lastSubmitRef.current === submitKey) return;
+    lastSubmitRef.current = submitKey;
     setIsProcessing(true);
 
     const result = await submitAction(state.session.id, {
@@ -136,11 +142,16 @@ export function GameView() {
       dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Action failed" });
     }
     setIsProcessing(false);
+    lastSubmitRef.current = null;
   }
 
   async function handleFreeTextSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!freeText.trim() || isProcessing || !state.session) return;
+    // Deduplicate rapid form submissions of the same text
+    const submitKey = `freetext:${freeText.trim()}`;
+    if (lastSubmitRef.current === submitKey) return;
+    lastSubmitRef.current = submitKey;
     setIsProcessing(true);
 
     const text = freeText;
@@ -165,6 +176,7 @@ export function GameView() {
       dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Action failed" });
     }
     setIsProcessing(false);
+    lastSubmitRef.current = null;
   }
 
   async function handleScan() {
@@ -506,7 +518,10 @@ function TurnDisplay({
   turn: GameTurn;
   isLatest: boolean;
 }) {
-  const paragraphs = turn.narrative.split(/\n\n+/).filter(Boolean);
+  const paragraphs = useMemo(
+    () => turn.narrative.split(/\n\n+/).filter(Boolean),
+    [turn.narrative],
+  );
 
   return (
     <div className={`${styles.turn} ${isLatest ? styles.latestTurn : ""}`}>

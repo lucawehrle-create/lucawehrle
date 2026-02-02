@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import styles from "./Typewriter.module.css";
 
 interface TypewriterProps {
@@ -11,11 +11,13 @@ interface TypewriterProps {
 export function Typewriter({ text, speed = 18, onComplete, className }: TypewriterProps) {
   const [displayedLength, setDisplayedLength] = useState(0);
   const [skipped, setSkipped] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const rafRef = useRef<number>(0);
+  const lastTimeRef = useRef<number>(0);
 
   useEffect(() => {
     setDisplayedLength(0);
     setSkipped(false);
+    lastTimeRef.current = 0;
   }, [text]);
 
   useEffect(() => {
@@ -30,29 +32,35 @@ export function Typewriter({ text, speed = 18, onComplete, className }: Typewrit
       return;
     }
 
-    intervalRef.current = setInterval(() => {
-      setDisplayedLength((prev) => {
-        // Skip faster through whitespace
-        let next = prev + 1;
-        while (next < text.length && text[next] === " ") {
-          next++;
-        }
-        if (next >= text.length) {
-          clearInterval(intervalRef.current);
-        }
-        return next;
-      });
-    }, speed);
+    const step = (timestamp: number) => {
+      if (!lastTimeRef.current) lastTimeRef.current = timestamp;
+      const elapsed = timestamp - lastTimeRef.current;
 
-    return () => clearInterval(intervalRef.current);
+      if (elapsed >= speed) {
+        lastTimeRef.current = timestamp;
+        setDisplayedLength((prev) => {
+          let next = prev + 1;
+          // Skip faster through whitespace
+          while (next < text.length && text[next] === " ") {
+            next++;
+          }
+          return next;
+        });
+      }
+
+      rafRef.current = requestAnimationFrame(step);
+    };
+
+    rafRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafRef.current);
   }, [text, speed, displayedLength, skipped, onComplete]);
 
-  function handleClick() {
+  const handleClick = useCallback(() => {
     if (displayedLength < text.length) {
       setSkipped(true);
-      clearInterval(intervalRef.current);
+      cancelAnimationFrame(rafRef.current);
     }
-  }
+  }, [displayedLength, text.length]);
 
   const isTyping = displayedLength < text.length && !skipped;
 

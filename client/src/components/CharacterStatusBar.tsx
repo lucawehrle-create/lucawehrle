@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import type { Character } from "@aetheria/shared";
 import { getXPProgress, getXPForNextLevel } from "@aetheria/shared";
 import { useGame } from "../context/GameContext.js";
@@ -21,14 +21,23 @@ interface CharacterStatusBarProps {
 
 export function CharacterStatusBar({ character }: CharacterStatusBarProps) {
   const { state } = useGame();
-  const hpPercent = Math.max(0, Math.min(100, (character.hitPoints / character.maxHitPoints) * 100));
-  const hpColor = hpPercent > 60 ? "#51cf66" : hpPercent > 30 ? "#ffd43b" : "#dc3545";
-  const icon = CLASS_ICONS[character.characterClass] ?? "\u2B22";
 
-  const xpProgress = getXPProgress(character.experience, character.level);
-  const xpPercent = Math.round(xpProgress * 100);
-  const nextLevelXP = getXPForNextLevel(character.level);
-  const isMaxLevel = nextLevelXP === null;
+  const { hpPercent, hpColor, icon, xpPercent, nextLevelXP, isMaxLevel } = useMemo(() => {
+    const hp = Math.max(0, Math.min(100, (character.hitPoints / character.maxHitPoints) * 100));
+    const color = hp > 60 ? "#51cf66" : hp > 30 ? "#ffd43b" : "#dc3545";
+    const classIcon = CLASS_ICONS[character.characterClass] ?? "\u2B22";
+    const xpProgress = getXPProgress(character.experience, character.level);
+    const xpPct = Math.round(xpProgress * 100);
+    const nextXP = getXPForNextLevel(character.level);
+    return {
+      hpPercent: hp,
+      hpColor: color,
+      icon: classIcon,
+      xpPercent: xpPct,
+      nextLevelXP: nextXP,
+      isMaxLevel: nextXP === null,
+    };
+  }, [character.hitPoints, character.maxHitPoints, character.characterClass, character.experience, character.level]);
 
   const portraitUrl = useCharacterPortrait(
     state.user?.id,

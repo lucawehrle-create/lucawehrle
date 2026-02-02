@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useGame } from "../context/GameContext.js";
 import { getInventory, discardItem } from "../services/api.js";
 import type { Item, ItemRarity, ItemCategory } from "@aetheria/shared";
@@ -88,21 +88,32 @@ export function InventoryPanel({ onClose }: InventoryPanelProps) {
 
   const inventory = state.inventory;
 
-  // Compute available categories from items
-  const categories = inventory
-    ? [...new Set(inventory.items.map((i) => i.category))]
-    : [];
+  // Memoize: available categories + count per category
+  const categories = useMemo(() => {
+    if (!inventory) return [];
+    return [...new Set(inventory.items.map((i) => i.category))];
+  }, [inventory]);
 
-  // Filter and sort items
-  const displayItems = inventory
-    ? inventory.items
-        .filter((item) => !filterCategory || item.category === filterCategory)
-        .sort((a, b) => {
-          if (sortMode === "rarity") return (RARITY_ORDER[a.rarity] ?? 5) - (RARITY_ORDER[b.rarity] ?? 5);
-          if (sortMode === "name") return a.name.localeCompare(b.name);
-          return (b.properties.value ?? 0) - (a.properties.value ?? 0);
-        })
-    : [];
+  const categoryCounts = useMemo(() => {
+    if (!inventory) return new Map<string, number>();
+    const counts = new Map<string, number>();
+    for (const item of inventory.items) {
+      counts.set(item.category, (counts.get(item.category) ?? 0) + 1);
+    }
+    return counts;
+  }, [inventory]);
+
+  // Memoize: filtered + sorted items
+  const displayItems = useMemo(() => {
+    if (!inventory) return [];
+    return inventory.items
+      .filter((item) => !filterCategory || item.category === filterCategory)
+      .sort((a, b) => {
+        if (sortMode === "rarity") return (RARITY_ORDER[a.rarity] ?? 5) - (RARITY_ORDER[b.rarity] ?? 5);
+        if (sortMode === "name") return a.name.localeCompare(b.name);
+        return (b.properties.value ?? 0) - (a.properties.value ?? 0);
+      });
+  }, [inventory, filterCategory, sortMode]);
 
   const cycleSortMode = () => {
     setSortMode((prev) =>
@@ -158,7 +169,7 @@ export function InventoryPanel({ onClose }: InventoryPanelProps) {
                   >
                     {CATEGORY_ICONS[cat] ?? "?"}{" "}
                     <span className={styles.filterCount}>
-                      {inventory.items.filter((i) => i.category === cat).length}
+                      {categoryCounts.get(cat) ?? 0}
                     </span>
                   </button>
                 ))}

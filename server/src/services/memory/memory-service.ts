@@ -35,22 +35,55 @@ export interface MemoryService {
 export class InMemoryMemoryService implements MemoryService {
   private memories: Map<string, MemoryEntry[]> = new Map();
   private summaries: Map<string, ContextSummary> = new Map();
+  /** Global vocabulary shared across all sessions for consistent embeddings */
+  private globalVocab: Map<string, number> = new Map();
+  private vocabIdx = 0;
   /** Number of recent turns to keep in full detail */
   private readonly recentTurnWindow = 10;
   /** Turns between summary updates */
   private readonly summaryInterval = 5;
+  /** Maximum memories per session before pruning */
+  private readonly maxMemoriesPerSession = 200;
+  /** How many low-importance memories to prune at once */
+  private readonly pruneCount = 30;
 
   async storeMemory(entry: MemoryEntry): Promise<void> {
     const sessionMemories = this.memories.get(entry.sessionId) ?? [];
-    // Generate a simple embedding from the content
+    // Generate embedding using the global vocabulary cache
     entry.embedding = this.generateSimpleEmbedding(entry.content);
     sessionMemories.push(entry);
     this.memories.set(entry.sessionId, sessionMemories);
+
+    // Auto-prune when session exceeds max memories
+    if (sessionMemories.length > this.maxMemoriesPerSession) {
+      this.pruneSession(entry.sessionId);
+    }
 
     // Check if we should update the context summary
     if (sessionMemories.length % this.summaryInterval === 0) {
       await this.updateContextSummary(entry.sessionId);
     }
+  }
+
+  /**
+   * Remove oldest low-importance memories to keep sessions bounded.
+   * Keeps recent memories and high-importance entries.
+   */
+  private pruneSession(sessionId: string): void {
+    const memories = this.memories.get(sessionId);
+    if (!memories || memories.length <= this.maxMemoriesPerSession) return;
+
+    // Never prune the most recent turns
+    const recentCutoff = memories.length - this.recentTurnWindow;
+    const oldMemories = memories.slice(0, recentCutoff);
+
+    // Sort old memories by importance (lowest first) and remove the weakest
+    const scored = oldMemories.map((m, idx) => ({ idx, importance: m.importance }));
+    scored.sort((a, b) => a.importance - b.importance);
+
+    const toRemove = new Set(scored.slice(0, this.pruneCount).map((s) => s.idx));
+    const pruned = memories.filter((_, idx) => !toRemove.has(idx));
+    this.memories.set(sessionId, pruned);
   }
 
   async queryMemories(query: MemoryQuery): Promise<MemoryEntry[]> {
@@ -120,26 +153,30 @@ export class InMemoryMemoryService implements MemoryService {
     this.summaries.delete(sessionId);
   }
 
+  private static readonly EMBEDDING_DIM = 512;
+
   /**
-   * Generate a simple bag-of-words embedding.
+   * Generate a bag-of-words embedding using a global vocabulary cache.
+   * The shared vocabulary ensures consistent vector dimensions across all
+   * memories, making cosine similarity meaningful across sessions.
    * In production, this would call an embedding API (e.g., OpenAI text-embedding-3).
    */
   private generateSimpleEmbedding(text: string): number[] {
     const words = text.toLowerCase().split(/\W+/).filter(Boolean);
-    const vocab = new Map<string, number>();
-    let idx = 0;
 
+    // Grow global vocabulary with new words (capped at EMBEDDING_DIM)
     for (const word of words) {
-      if (!vocab.has(word)) {
-        vocab.set(word, idx++);
+      if (!this.globalVocab.has(word) && this.vocabIdx < InMemoryMemoryService.EMBEDDING_DIM) {
+        this.globalVocab.set(word, this.vocabIdx++);
       }
     }
 
-    // Create sparse vector (simplified)
-    const vector = new Array(Math.min(vocab.size, 256)).fill(0);
+    // Build term-frequency vector using global vocab indices
+    const dim = Math.min(this.vocabIdx, InMemoryMemoryService.EMBEDDING_DIM);
+    const vector = new Array(dim).fill(0);
     for (const word of words) {
-      const i = vocab.get(word)!;
-      if (i < vector.length) {
+      const i = this.globalVocab.get(word);
+      if (i !== undefined && i < dim) {
         vector[i] += 1;
       }
     }
@@ -147,7 +184,7 @@ export class InMemoryMemoryService implements MemoryService {
     // Normalize
     const magnitude = Math.sqrt(vector.reduce((sum, v) => sum + v * v, 0));
     if (magnitude > 0) {
-      for (let i = 0; i < vector.length; i++) {
+      for (let i = 0; i < dim; i++) {
         vector[i] /= magnitude;
       }
     }

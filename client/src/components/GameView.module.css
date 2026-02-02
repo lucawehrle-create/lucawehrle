@@ -95,9 +95,93 @@
 /* Main content */
 .mainArea {
   display: flex;
+  flex-direction: column;
   flex: 1;
   overflow: hidden;
   z-index: 1;
+}
+
+/* --- Persistent scene image panel --- */
+.scenePanel {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--color-surface-alt);
+}
+
+.scenePanelImgPrev,
+.scenePanelImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+}
+
+.scenePanelImgPrev {
+  z-index: 0;
+}
+
+.scenePanelImg {
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+.scenePanelImgRevealed {
+  opacity: 1;
+}
+
+/* Bottom gradient: blends scene image into the dark narrative background */
+.scenePanelGradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(to top, var(--color-bg) 0%, transparent 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Shimmer when no image exists yet */
+.scenePanelShimmer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  z-index: 3;
+}
+
+/* Small loading indicator when scene is updating but existing image is still shown */
+.scenePanelLoadingDot {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--mood-primary);
+  z-index: 3;
+  animation: scenePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes scenePulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* --- Content row (narrative + sidebar) --- */
+.contentRow {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
 .narrativeScroll {
@@ -174,28 +258,7 @@
   gap: var(--space-sm);
 }
 
-/* Scene image container */
-.sceneImageContainer {
-  margin: var(--space-md) 0;
-  min-height: 20px;
-}
-
-/* Shimmer loading placeholder */
-.imageShimmer {
-  width: 100%;
-  height: 180px;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-alt);
-  border: 1px solid var(--color-border);
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-}
-
+/* Shimmer loading effects (shared by scene panel) */
 .shimmerWave {
   position: absolute;
   inset: 0;
@@ -234,29 +297,6 @@
 @keyframes shimmerPulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
-}
-
-/* Scene image with cinematic reveal */
-.sceneImage {
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  border: 1px solid var(--mood-border);
-  opacity: 0;
-  transform: scale(0.98);
-  max-height: 0;
-  transition: opacity 0.8s ease, transform 0.8s ease, max-height 0.6s ease;
-}
-
-.sceneImageRevealed {
-  opacity: 1;
-  transform: scale(1);
-  max-height: 600px;
-}
-
-.sceneImage img {
-  width: 100%;
-  height: auto;
-  display: block;
 }
 
 /* Action panel */

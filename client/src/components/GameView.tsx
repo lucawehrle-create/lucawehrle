@@ -46,6 +46,28 @@ export function GameView() {
 
   const currentTurn = state.turns[state.turns.length - 1];
 
+  // --- Persistent scene image ---
+  // Track the currently displayed scene image and cross-fade on change
+  const [sceneImage, setSceneImage] = useState<string | null>(null);
+  const [prevSceneImage, setPrevSceneImage] = useState<string | null>(null);
+
+  // Poll for new image only when the latest turn expects one (has imagePrompt)
+  const expectsNewImage = !!currentTurn?.imagePrompt;
+  const { imageUrl: polledImageUrl, isLoading: sceneImageLoading } = useSceneImage(
+    expectsNewImage ? state.session?.id : undefined,
+    expectsNewImage ? currentTurn?.id : undefined,
+    currentTurn?.imageUrl,
+  );
+
+  // Update persistent scene image when a new one arrives (polled or reused)
+  useEffect(() => {
+    const newUrl = polledImageUrl || currentTurn?.imageUrl;
+    if (newUrl && newUrl !== sceneImage) {
+      setPrevSceneImage(sceneImage);
+      setSceneImage(newUrl);
+    }
+  }, [polledImageUrl, currentTurn?.imageUrl]);
+
   useEffect(() => {
     narrativeEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.turns.length]);
@@ -218,33 +240,42 @@ export function GameView() {
 
       {/* Main content area */}
       <div className={styles.mainArea}>
-        {/* Narrative scroll */}
-        <div className={styles.narrativeScroll}>
-          {/* Combat HUD */}
-          {state.combatState && state.selectedCharacter && (
-            <CombatHUD
-              combatState={state.combatState}
-              character={state.selectedCharacter}
-            />
+        {/* Persistent scene image panel */}
+        <SceneImagePanel
+          sceneImage={sceneImage}
+          prevSceneImage={prevSceneImage}
+          isLoading={expectsNewImage && sceneImageLoading && !polledImageUrl}
+        />
+
+        {/* Content row: narrative + optional sidebar */}
+        <div className={styles.contentRow}>
+          {/* Narrative scroll */}
+          <div className={styles.narrativeScroll}>
+            {/* Combat HUD */}
+            {state.combatState && state.selectedCharacter && (
+              <CombatHUD
+                combatState={state.combatState}
+                character={state.selectedCharacter}
+              />
+            )}
+
+            {state.turns.map((turn, index) => (
+              <TurnDisplay
+                key={turn.id}
+                turn={turn}
+                isLatest={index === state.turns.length - 1}
+              />
+            ))}
+            <div ref={narrativeEndRef} />
+          </div>
+
+          {/* Inventory sidebar */}
+          {showInventory && (
+            <aside className={styles.sidebar}>
+              <InventoryPanel onClose={() => setShowInventory(false)} />
+            </aside>
           )}
-
-          {state.turns.map((turn, index) => (
-            <TurnDisplay
-              key={turn.id}
-              turn={turn}
-              isLatest={index === state.turns.length - 1}
-              sessionId={state.session?.id}
-            />
-          ))}
-          <div ref={narrativeEndRef} />
         </div>
-
-        {/* Inventory sidebar */}
-        {showInventory && (
-          <aside className={styles.sidebar}>
-            <InventoryPanel onClose={() => setShowInventory(false)} />
-          </aside>
-        )}
       </div>
 
       {/* Action panel */}
@@ -402,43 +433,80 @@ const SCENE_LOADING_MESSAGES = [
   "Pinselstriche der Magie...",
 ];
 
+/** Persistent scene image panel — stays visible and cross-fades on scene change. */
+function SceneImagePanel({
+  sceneImage,
+  prevSceneImage,
+  isLoading,
+}: {
+  sceneImage: string | null;
+  prevSceneImage: string | null;
+  isLoading: boolean;
+}) {
+  const [revealed, setRevealed] = useState(!!sceneImage);
+  const [shimmerIdx, setShimmerIdx] = useState(0);
+
+  // Reveal animation when image changes
+  useEffect(() => {
+    if (sceneImage) {
+      setRevealed(false);
+      const timer = setTimeout(() => setRevealed(true), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [sceneImage]);
+
+  // Cycle shimmer messages while loading
+  useEffect(() => {
+    if (!isLoading) return;
+    const timer = setInterval(() => {
+      setShimmerIdx((i) => (i + 1) % SCENE_LOADING_MESSAGES.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [isLoading]);
+
+  return (
+    <div className={styles.scenePanel}>
+      {/* Previous image (fades out behind new one) */}
+      {prevSceneImage && (
+        <img
+          src={prevSceneImage}
+          alt=""
+          className={styles.scenePanelImgPrev}
+        />
+      )}
+      {/* Current scene image with cross-fade */}
+      {sceneImage && (
+        <img
+          src={sceneImage}
+          alt="Szene"
+          className={`${styles.scenePanelImg} ${revealed ? styles.scenePanelImgRevealed : ""}`}
+        />
+      )}
+      {/* Gradient overlay for blending into narrative */}
+      <div className={styles.scenePanelGradient} />
+      {/* Loading shimmer overlay */}
+      {isLoading && !sceneImage && (
+        <div className={styles.scenePanelShimmer}>
+          <div className={styles.shimmerWave} />
+          <span className={styles.shimmerIcon}>{"\uD83C\uDFA8"}</span>
+          <span className={styles.shimmerText}>{SCENE_LOADING_MESSAGES[shimmerIdx]}</span>
+        </div>
+      )}
+      {isLoading && sceneImage && (
+        <div className={styles.scenePanelLoadingDot} title="Neue Szene wird geladen..." />
+      )}
+    </div>
+  );
+}
+
 function TurnDisplay({
   turn,
   isLatest,
-  sessionId,
 }: {
   turn: GameTurn;
   isLatest: boolean;
-  sessionId: string | undefined;
 }) {
   const paragraphs = turn.narrative.split(/\n\n+/).filter(Boolean);
-  // Only poll for images when a new scene image is being generated (imagePrompt set)
-  const expectsNewImage = isLatest && !!turn.imagePrompt;
-  const { imageUrl, isLoading: imageLoading } = useSceneImage(
-    expectsNewImage ? sessionId : undefined,
-    expectsNewImage ? turn.id : undefined,
-    turn.imageUrl,
-  );
-  const [imageRevealed, setImageRevealed] = useState(!!turn.imageUrl);
-  const [shimmerMsgIndex, setShimmerMsgIndex] = useState(0);
-
-  // Cycle through loading messages
-  useEffect(() => {
-    if (!imageLoading || imageUrl) return;
-    const timer = setInterval(() => {
-      setShimmerMsgIndex((i) => (i + 1) % SCENE_LOADING_MESSAGES.length);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, [imageLoading, imageUrl]);
-
-  // Trigger cinematic reveal when image loads
-  useEffect(() => {
-    if (imageUrl && !imageRevealed) {
-      // Small delay for smoother experience
-      const timer = setTimeout(() => setImageRevealed(true), 200);
-      return () => clearTimeout(timer);
-    }
-  }, [imageUrl, imageRevealed]);
 
   return (
     <div className={`${styles.turn} ${isLatest ? styles.latestTurn : ""}`}>
@@ -464,22 +532,6 @@ function TurnDisplay({
           <Typewriter text={turn.narrative} speed={16} />
         ) : (
           paragraphs.map((p, i) => <p key={i} className={styles.paragraph}>{p}</p>)
-        )}
-      </div>
-
-      {/* Scene image with shimmer loading + cinematic fade-in */}
-      <div className={styles.sceneImageContainer}>
-        {isLatest && imageLoading && !imageUrl && (
-          <div className={styles.imageShimmer}>
-            <div className={styles.shimmerWave} />
-            <span className={styles.shimmerIcon}>{"\uD83C\uDFA8"}</span>
-            <span className={styles.shimmerText}>{SCENE_LOADING_MESSAGES[shimmerMsgIndex]}</span>
-          </div>
-        )}
-        {imageUrl && (
-          <div className={`${styles.sceneImage} ${imageRevealed ? styles.sceneImageRevealed : ""}`}>
-            <img src={imageUrl} alt="Szene" loading="lazy" />
-          </div>
         )}
       </div>
     </div>

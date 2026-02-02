@@ -22,6 +22,7 @@ import type {
   ItemEffect,
 } from "@aetheria/shared";
 import { LEVEL_THRESHOLDS } from "@aetheria/shared";
+import { buildCharacterAppearance } from "../services/ai/prompts.js";
 
 /**
  * Calculate XP reward for a turn based on events and dice rolls.
@@ -152,7 +153,7 @@ export function createGameRoutes(
       if (firstTurn.imagePrompt) {
         aiService.generateImage({
           prompt: firstTurn.imagePrompt,
-          characterAppearance: character.appearance.clothing,
+          characterAppearance: buildCharacterAppearance(character),
           mood: firstTurn.mood,
           style: "fantasy_painting",
           modelTier: "standard",
@@ -293,7 +294,7 @@ export function createGameRoutes(
       if (hasNewScene) {
         aiService.generateImage({
           prompt: result.turn.imagePrompt!,
-          characterAppearance: character.appearance.clothing,
+          characterAppearance: buildCharacterAppearance(character),
           mood: result.turn.mood,
           style: "fantasy_painting",
           modelTier: "standard",

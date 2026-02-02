@@ -14,7 +14,8 @@ OPTIONEN: 2-4 verschiedene Handlungsoptionen auf Deutsch. Jede mit type (combat/
 
 STIMMUNG (mood): combat/exploration/dialogue/mystery/safe/danger/celebration/sorrow — passend zur Szene.
 
-BILD-PROMPT (imagePrompt): NUR bei Szenenwechsel (neuer Ort, Kampfbeginn/-ende, wichtiges visuelles Ereignis). Auf ENGLISCH fuer KI-Bildgenerator mit Szene und Charakter-Aussehen. Bei Gespraechen oder Aktionen am gleichen Ort: imagePrompt weglassen oder null setzen.
+BILD-PROMPT (imagePrompt): NUR bei Szenenwechsel (neuer Ort, Kampfbeginn/-ende, wichtiges visuelles Ereignis). Bei Gespraechen oder Aktionen am gleichen Ort: imagePrompt weglassen oder null setzen.
+Wenn imagePrompt gesetzt wird: Auf ENGLISCH, sehr detailliert (Umgebung, Beleuchtung, Atmosphaere, Wetter, Tageszeit, Farben, architektonische Details, Vegetation, Hintergrund). Beschreibe die Szene cinematisch aus Spielerperspektive. KEIN Charakter-Aussehen im Prompt (wird automatisch hinzugefuegt).
 
 EVENTS: Erkenne Spielereignisse. Typen: narrative_update, combat_start, combat_end, item_acquired, item_lost, level_up, npc_met, quest_start, quest_complete, character_death.
 - item_acquired: {"type":"item_acquired","payload":{"name":"Deutsch","description":"Deutsch","category":"weapon|armor|potion|scroll|key|quest|material|food|tool","rarity":"common|uncommon|rare|epic|legendary","visualDescription":"ENGLISH visual for image gen","weight":2,"value":50,"effects":[{"type":"buff","target":"self","description":"Effekt"}]}}
@@ -120,16 +121,51 @@ export function buildTextPrompt(request: TextGenerationRequest): string {
 
 /** Build a DALL-E / image generation style hint from the request. */
 export function buildImageStyleHint(style: string): string {
+  const base = "cinematic composition, dramatic lighting, rich color palette, high detail, 4K quality";
   switch (style) {
     case "dark_gothic":
-      return "dark gothic oil painting style";
+      return `dark gothic oil painting, ${base}, moody shadows, candlelight`;
     case "watercolor":
-      return "delicate watercolor illustration style";
+      return `delicate watercolor illustration, ${base}, soft edges, flowing colors`;
     case "comic":
-      return "comic book illustration style with bold lines";
+      return `comic book illustration with bold lines, ${base}, vibrant colors`;
     default:
-      return "detailed fantasy digital painting style";
+      return `detailed fantasy digital painting, ${base}, painterly brushstrokes, atmospheric depth`;
   }
+}
+
+/** Build a detailed character appearance string for image generation. */
+export function buildCharacterAppearance(character: {
+  name: string;
+  race: string;
+  characterClass: string;
+  appearance: {
+    hairColor: string;
+    hairStyle: string;
+    eyeColor: string;
+    skinTone: string;
+    height: string;
+    build: string;
+    distinguishingFeatures: string[];
+    clothing: string;
+    equipment: string[];
+  };
+}): string {
+  const a = character.appearance;
+  const features = a.distinguishingFeatures.length > 0
+    ? a.distinguishingFeatures.join(", ")
+    : "";
+  const equipment = a.equipment.length > 0
+    ? a.equipment.join(", ")
+    : "";
+
+  return [
+    `${a.height} ${a.build} ${character.race} ${character.characterClass}`,
+    `${a.hairColor} ${a.hairStyle} hair, ${a.eyeColor} eyes, ${a.skinTone} skin`,
+    `wearing ${a.clothing}`,
+    equipment && `carrying ${equipment}`,
+    features && `distinctive: ${features}`,
+  ].filter(Boolean).join(". ") + ".";
 }
 
 /** Safely parse JSON from an LLM response, with fallback on failure. */

@@ -25,7 +25,7 @@ export interface GameTurn {
   turnNumber: number;
   narrative: string;
   mood: SceneMood;
-  imagePrompt: string;
+  imagePrompt?: string;
   imageUrl?: string;
   options: ActionOption[];
   playerAction?: PlayerAction;

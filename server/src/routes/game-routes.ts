@@ -148,18 +148,21 @@ export function createGameRoutes(
       store.createSession(session);
       store.addTurn(firstTurn);
 
-      // Generate image asynchronously
-      aiService.generateImage({
-        prompt: firstTurn.imagePrompt,
-        characterAppearance: character.appearance.clothing,
-        mood: firstTurn.mood,
-        style: "fantasy_painting",
-        modelTier: "standard",
-      }).then((imageResult) => {
-        firstTurn.imageUrl = imageResult.imageUrl;
-      }).catch(() => {
-        // Image generation failure is non-blocking
-      });
+      // Generate opening scene image asynchronously (first turn always gets an image)
+      if (firstTurn.imagePrompt) {
+        aiService.generateImage({
+          prompt: firstTurn.imagePrompt,
+          characterAppearance: character.appearance.clothing,
+          mood: firstTurn.mood,
+          style: "fantasy_painting",
+          modelTier: "standard",
+        }).then((imageResult) => {
+          firstTurn.imageUrl = imageResult.imageUrl;
+          console.log(`[GameRoutes] Opening scene image generated for session ${session.id}`);
+        }).catch((err) => {
+          console.error("[GameRoutes] Opening scene image generation failed:", err instanceof Error ? err.message : err);
+        });
+      }
 
       const response: ApiResponse<{ session: GameSession; turn: GameTurn }> = {
         success: true,
@@ -284,18 +287,28 @@ export function createGameRoutes(
       store.updateSession(result.updatedSession);
       store.addTurn(result.turn);
 
-      // Generate scene image asynchronously
-      aiService.generateImage({
-        prompt: result.turn.imagePrompt,
-        characterAppearance: character.appearance.clothing,
-        mood: result.turn.mood,
-        style: "fantasy_painting",
-        modelTier: "standard",
-      }).then((imageResult) => {
-        result.turn.imageUrl = imageResult.imageUrl;
-      }).catch(() => {
-        // Image generation failure is non-blocking
-      });
+      // Only generate a new scene image when the AI indicates a visual scene change
+      const hasNewScene = result.turn.imagePrompt && result.turn.imagePrompt.trim().length > 0;
+
+      if (hasNewScene) {
+        aiService.generateImage({
+          prompt: result.turn.imagePrompt!,
+          characterAppearance: character.appearance.clothing,
+          mood: result.turn.mood,
+          style: "fantasy_painting",
+          modelTier: "standard",
+        }).then((imageResult) => {
+          result.turn.imageUrl = imageResult.imageUrl;
+          console.log(`[GameRoutes] Scene image generated for turn ${result.turn.id}`);
+        }).catch((err) => {
+          console.error("[GameRoutes] Scene image generation failed:", err instanceof Error ? err.message : err);
+        });
+      } else {
+        // Reuse previous turn's scene image (same location/scene)
+        if (previousTurn.imageUrl) {
+          result.turn.imageUrl = previousTurn.imageUrl;
+        }
+      }
 
       // Enrich combat events with generated enemy stats
       const enemyAC = 13 + Math.floor(character.level / 4);
@@ -360,8 +373,8 @@ export function createGameRoutes(
                   newItem.imageUrl = imageUrl;
                 }
               })
-              .catch(() => {
-                // Item image generation failure is non-blocking
+              .catch((err) => {
+                console.error("[GameRoutes] Item image generation failed:", err instanceof Error ? err.message : err);
               });
           }
         } else if (event.type === "item_lost") {

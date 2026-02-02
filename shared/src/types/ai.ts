@@ -23,7 +23,7 @@ export interface TextGenerationResponse {
     requiredAbility?: string;
     difficultyClass?: number;
   }>;
-  imagePrompt: string;
+  imagePrompt?: string;
   events: Array<{
     type: string;
     payload: Record<string, unknown>;

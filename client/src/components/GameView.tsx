@@ -412,10 +412,11 @@ function TurnDisplay({
   sessionId: string | undefined;
 }) {
   const paragraphs = turn.narrative.split(/\n\n+/).filter(Boolean);
-  // Only poll for images on the latest turn; older turns use their stored URL
+  // Only poll for images when a new scene image is being generated (imagePrompt set)
+  const expectsNewImage = isLatest && !!turn.imagePrompt;
   const { imageUrl, isLoading: imageLoading } = useSceneImage(
-    isLatest ? sessionId : undefined,
-    isLatest ? turn.id : undefined,
+    expectsNewImage ? sessionId : undefined,
+    expectsNewImage ? turn.id : undefined,
     turn.imageUrl,
   );
   const [imageRevealed, setImageRevealed] = useState(!!turn.imageUrl);

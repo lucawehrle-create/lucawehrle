@@ -68,11 +68,13 @@ export class MockAIService implements AIService {
     let narrativeIndex = 0;
     let optionsIndex = 0;
     let mood = "exploration";
+    let sceneChanged = false;
 
     if (actionLower.includes("fight") || actionLower.includes("attack") || actionLower.includes("combat")) {
       narrativeIndex = 3;
       optionsIndex = 0;
       mood = "combat";
+      sceneChanged = true;
     } else if (actionLower.includes("talk") || actionLower.includes("merchant") || actionLower.includes("speak")) {
       narrativeIndex = 2;
       optionsIndex = 2;
@@ -81,16 +83,20 @@ export class MockAIService implements AIService {
       narrativeIndex = 1;
       optionsIndex = 1;
       mood = "mystery";
+      sceneChanged = true;
     } else if (actionLower.includes("village") || actionLower.includes("rest") || actionLower.includes("safe")) {
       narrativeIndex = 4;
       optionsIndex = 2;
       mood = "safe";
+      sceneChanged = true;
     } else {
       narrativeIndex = Math.floor(Math.random() * this.narrativeTemplates.length);
       optionsIndex = Math.floor(Math.random() * this.optionSets.length);
       mood = this.moods[Math.floor(Math.random() * this.moods.length)];
     }
 
+    // Only provide imagePrompt on game start or scene changes (like the real AI)
+    const isGameStart = actionLower.includes("[game start]");
     const narrative = this.narrativeTemplates[narrativeIndex];
     const options = this.optionSets[optionsIndex];
 
@@ -98,7 +104,9 @@ export class MockAIService implements AIService {
       narrative,
       mood,
       options,
-      imagePrompt: `Fantasy RPG scene: ${narrative.slice(0, 100)}. ${request.mood} atmosphere, detailed digital painting style.`,
+      imagePrompt: (isGameStart || sceneChanged)
+        ? `Fantasy RPG scene: ${narrative.slice(0, 100)}. ${request.mood} atmosphere, detailed digital painting style.`
+        : undefined,
       events: this.generateEvents(actionLower),
       tokenUsage: {
         promptTokens: Math.floor(request.characterSummary.length / 4),

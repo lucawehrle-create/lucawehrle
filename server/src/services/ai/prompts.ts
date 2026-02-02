@@ -14,7 +14,7 @@ OPTIONEN: 2-4 verschiedene Handlungsoptionen auf Deutsch. Jede mit type (combat/
 
 STIMMUNG (mood): combat/exploration/dialogue/mystery/safe/danger/celebration/sorrow — passend zur Szene.
 
-BILD-PROMPT (imagePrompt): Auf ENGLISCH fuer KI-Bildgenerator. Beschreibe Szene und Aussehen des Charakters.
+BILD-PROMPT (imagePrompt): NUR bei Szenenwechsel (neuer Ort, Kampfbeginn/-ende, wichtiges visuelles Ereignis). Auf ENGLISCH fuer KI-Bildgenerator mit Szene und Charakter-Aussehen. Bei Gespraechen oder Aktionen am gleichen Ort: imagePrompt weglassen oder null setzen.
 
 EVENTS: Erkenne Spielereignisse. Typen: narrative_update, combat_start, combat_end, item_acquired, item_lost, level_up, npc_met, quest_start, quest_complete, character_death.
 - item_acquired: {"type":"item_acquired","payload":{"name":"Deutsch","description":"Deutsch","category":"weapon|armor|potion|scroll|key|quest|material|food|tool","rarity":"common|uncommon|rare|epic|legendary","visualDescription":"ENGLISH visual for image gen","weight":2,"value":50,"effects":[{"type":"buff","target":"self","description":"Effekt"}]}}
@@ -22,7 +22,9 @@ EVENTS: Erkenne Spielereignisse. Typen: narrative_update, combat_start, combat_e
 Verteile Gegenstaende natuerlich — nach Kaempfen, in Truhen, als Belohnung, beim Handel.
 
 Antworte NUR mit validem JSON (keine Markdown-Bloecke):
-{"narrative":"...","mood":"exploration","options":[{"text":"Deutsch","type":"combat","requiredAbility":"strength","difficultyClass":14}],"imagePrompt":"English scene...","events":[]}`;
+{"narrative":"...","mood":"exploration","options":[{"text":"Deutsch","type":"combat","requiredAbility":"strength","difficultyClass":14}],"imagePrompt":null,"events":[]}
+Bei Szenenwechsel: "imagePrompt":"English scene description with character appearance..."
+`;
 
 /** System prompt for analyzing scanned real-world objects via vision. */
 export const OBJECT_SCAN_SYSTEM_PROMPT = `Du bist ein Objekt-Analyst fuer das RPG-Spiel "Aetheria AI".
@@ -72,7 +74,7 @@ export const TEXT_GENERATION_FALLBACK = {
     { text: "Mutig voranschreiten", type: "exploration", difficultyClass: 8 },
     { text: "In die Dunkelheit rufen", type: "social", difficultyClass: 12 },
   ],
-  imagePrompt: "A fantasy RPG scene, atmospheric digital painting.",
+  imagePrompt: undefined,
   events: [] as Array<{ type: string; payload: Record<string, unknown> }>,
 };
 

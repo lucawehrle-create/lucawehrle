@@ -42,7 +42,7 @@ export function createApp() {
         openaiApiKey: config.openaiApiKey,
         textModel: config.aiTextModel,
       });
-      console.log("[Aetheria AI] KI-Modus: LIVE (Gemini + DALL-E)");
+      console.log("[Aetheria AI] KI-Modus: LIVE (Gemini – Text + Bilder)");
       break;
 
     default:
@@ -52,7 +52,7 @@ export function createApp() {
       break;
   }
 
-  if (config.aiProvider !== "mock" && !config.openaiApiKey) {
+  if (config.aiProvider === "anthropic" && !config.openaiApiKey) {
     console.log("[Aetheria AI] Hinweis: Kein OPENAI_API_KEY – Bilder werden als Platzhalter angezeigt");
   }
 
@@ -76,7 +76,7 @@ export function createApp() {
       service: "Aetheria AI",
       version: "1.0.0",
       aiProvider: config.aiProvider,
-      imageGeneration: config.aiProvider !== "mock" && !!config.openaiApiKey ? "dall-e-3" : "placeholder",
+      imageGeneration: config.aiProvider === "gemini" ? "gemini" : config.aiProvider === "anthropic" && !!config.openaiApiKey ? "dall-e-3" : "placeholder",
       timestamp: new Date().toISOString(),
     });
   });

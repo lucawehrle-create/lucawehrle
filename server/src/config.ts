@@ -5,11 +5,11 @@ export type AIProvider = "anthropic" | "gemini" | "mock";
  * Server configuration loaded from environment variables.
  *
  * For live AI, set ONE of:
- *   ANTHROPIC_API_KEY  – uses Claude for text + vision
- *   GEMINI_API_KEY     – uses Google Gemini for text + vision
+ *   ANTHROPIC_API_KEY  – uses Claude for text + vision + DALL-E images
+ *   GEMINI_API_KEY     – uses Google Gemini for text + vision + native image generation
  *
  * Optional:
- *   OPENAI_API_KEY     – for image generation (DALL-E 3). Without it, placeholder images are used.
+ *   OPENAI_API_KEY     – for DALL-E image generation (only used with Anthropic provider)
  *   AI_PROVIDER        – force a provider: "anthropic", "gemini", or "mock" (auto-detected if omitted)
  *   AI_TEXT_MODEL      – override the model name (provider-specific)
  *   PORT               – server port (default: 4000)

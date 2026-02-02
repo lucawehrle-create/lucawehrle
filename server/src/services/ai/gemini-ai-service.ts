@@ -1,5 +1,4 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import OpenAI from "openai";
 import type {
   TextGenerationRequest,
   TextGenerationResponse,
@@ -44,14 +43,33 @@ async function withRetry<T>(
   throw lastError;
 }
 
+/** Model used for Gemini native image generation. */
+const GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image";
+
+/** Extract a base64 data-URI from a Gemini image generation response. */
+function extractImageFromResponse(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  result: any,
+): string | null {
+  const parts = result.response?.candidates?.[0]?.content?.parts ?? [];
+  for (const part of parts) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const inline = (part as any).inlineData as
+      | { mimeType: string; data: string }
+      | undefined;
+    if (inline?.data) {
+      return `data:${inline.mimeType};base64,${inline.data}`;
+    }
+  }
+  return null;
+}
+
 /**
- * AI service using Google Gemini (text + vision) and OpenAI DALL-E 3 (images).
+ * AI service using Google Gemini for text, vision, and image generation.
  */
 export class GeminiAIService implements AIService {
   private genAI: GoogleGenerativeAI;
-  private openai: OpenAI;
   private textModel: string;
-  private imageEnabled: boolean;
 
   constructor(config: {
     geminiApiKey: string;
@@ -59,9 +77,7 @@ export class GeminiAIService implements AIService {
     textModel?: string;
   }) {
     this.genAI = new GoogleGenerativeAI(config.geminiApiKey);
-    this.openai = new OpenAI({ apiKey: config.openaiApiKey ?? "" });
     this.textModel = config.textModel ?? "gemini-2.0-flash";
-    this.imageEnabled = !!config.openaiApiKey;
   }
 
   async generateText(request: TextGenerationRequest): Promise<TextGenerationResponse> {
@@ -100,172 +116,97 @@ export class GeminiAIService implements AIService {
     const styleHint = buildImageStyleHint(request.style);
     const fullPrompt = `${request.prompt}. ${styleHint}. Character: ${request.characterAppearance}. Mood: ${request.mood}. No text or UI elements in the image.`;
 
-    // Try Gemini native image generation first (faster, returns base64)
-    try {
-      const imageModel = this.genAI.getGenerativeModel({
-        model: "gemini-2.0-flash-exp-image-generation",
-      });
+    return withRetry(
+      async () => {
+        const imageModel = this.genAI.getGenerativeModel({
+          model: GEMINI_IMAGE_MODEL,
+        });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await imageModel.generateContent({
-        contents: [{ role: "user", parts: [{ text: `Generate an atmospheric scene image: ${fullPrompt}` }] }],
-        generationConfig: {
-          responseModalities: ["IMAGE", "TEXT"],
-        } as any,
-      } as any);
-
-      const parts = result.response.candidates?.[0]?.content?.parts ?? [];
-      for (const part of parts) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const inline = (part as any).inlineData as
-          | { mimeType: string; data: string }
-          | undefined;
-        if (inline?.data) {
+        const result = await imageModel.generateContent({
+          contents: [{ role: "user", parts: [{ text: `Generate an atmospheric scene image: ${fullPrompt}` }] }],
+          generationConfig: {
+            responseModalities: ["IMAGE", "TEXT"],
+          } as any,
+        } as any);
+
+        const imageUrl = extractImageFromResponse(result);
+        if (imageUrl) {
           return {
-            imageUrl: `data:${inline.mimeType};base64,${inline.data}`,
+            imageUrl,
             revisedPrompt: fullPrompt,
             generationTimeMs: Date.now() - start,
           };
         }
-      }
-    } catch (error) {
-      console.error(
-        "[GeminiAIService] Gemini scene image generation failed, trying DALL-E fallback:",
-        error instanceof Error ? error.message : error,
-      );
-    }
 
-    // Fallback to DALL-E if Gemini failed or returned no image
-    if (!this.imageEnabled) {
-      const w = request.width ?? 1024;
-      const h = request.height ?? 1024;
-      return {
-        imageUrl: `https://placehold.co/${w}x${h}/1a1a2e/e0e0e0?text=Scene`,
-        revisedPrompt: request.prompt,
-        generationTimeMs: 0,
-      };
-    }
-
-    const response = await this.openai.images.generate({
-      model: "dall-e-3",
-      prompt: fullPrompt.slice(0, 4000),
-      n: 1,
-      size: "1024x1024",
-      quality: request.modelTier === "premium" || request.modelTier === "hd" ? "hd" : "standard",
-    });
-
-    const img = response.data?.[0];
-    return {
-      imageUrl: img?.url ?? "",
-      revisedPrompt: img?.revised_prompt ?? request.prompt,
-      generationTimeMs: Date.now() - start,
-    };
+        // No image data returned — return empty so the client knows there's no image
+        console.warn("[GeminiAIService] Scene image generation returned no image data");
+        return {
+          imageUrl: "",
+          revisedPrompt: fullPrompt,
+          generationTimeMs: Date.now() - start,
+        };
+      },
+      2,
+      2000,
+    );
   }
 
   async generateItemImage(visualDescription: string, itemName: string): Promise<string | null> {
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: "gemini-2.0-flash-exp-image-generation",
-      });
+      return await withRetry(
+        async () => {
+          const model = this.genAI.getGenerativeModel({
+            model: GEMINI_IMAGE_MODEL,
+          });
 
-      const prompt = `Generate a single RPG fantasy game item icon on a solid dark background (#1a1a2e). The item: "${itemName}". Visual details: ${visualDescription}. Style: detailed fantasy RPG item icon, painterly digital art style, glowing magical effects where appropriate, no text or labels, centered composition, 128x128 icon.`;
+          const prompt = `Generate a single RPG fantasy game item icon on a solid dark background (#1a1a2e). The item: "${itemName}". Visual details: ${visualDescription}. Style: detailed fantasy RPG item icon, painterly digital art style, glowing magical effects where appropriate, no text or labels, centered composition, 128x128 icon.`;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseModalities: ["IMAGE", "TEXT"],
-        } as any, // responseModalities may not be in the SDK type yet
-      } as any);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseModalities: ["IMAGE", "TEXT"],
+            } as any,
+          } as any);
 
-      const parts = result.response.candidates?.[0]?.content?.parts ?? [];
-      for (const part of parts) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const inline = (part as any).inlineData as
-          | { mimeType: string; data: string }
-          | undefined;
-        if (inline?.data) {
-          return `data:${inline.mimeType};base64,${inline.data}`;
-        }
-      }
-
-      // Fallback: if DALL-E available, try that
-      if (this.imageEnabled) {
-        return this.generateItemImageWithDalle(visualDescription, itemName);
-      }
-      return null;
+          return extractImageFromResponse(result);
+        },
+        2,
+        2000,
+      );
     } catch (error) {
       console.error(
-        "[GeminiAIService] Gemini image generation failed, trying fallback:",
+        "[GeminiAIService] Item image generation failed:",
         error instanceof Error ? error.message : error,
       );
-      // Fallback to DALL-E if available
-      if (this.imageEnabled) {
-        try {
-          return await this.generateItemImageWithDalle(visualDescription, itemName);
-        } catch {
-          return null;
-        }
-      }
       return null;
     }
   }
 
-  private async generateItemImageWithDalle(
-    visualDescription: string,
-    itemName: string,
-  ): Promise<string | null> {
-    const prompt = `RPG fantasy game item icon: "${itemName}". ${visualDescription}. Dark background, centered, detailed fantasy art, no text.`;
-    const response = await this.openai.images.generate({
-      model: "dall-e-3",
-      prompt: prompt.slice(0, 4000),
-      n: 1,
-      size: "1024x1024",
-      quality: "standard",
-    });
-    return response.data?.[0]?.url ?? null;
-  }
-
   async generatePortrait(description: string, race: string, charClass: string): Promise<string | null> {
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: "gemini-2.0-flash-exp-image-generation",
-      });
+      return await withRetry(
+        async () => {
+          const model = this.genAI.getGenerativeModel({
+            model: GEMINI_IMAGE_MODEL,
+          });
 
-      const prompt = `Generate a fantasy RPG character portrait. Race: ${race}. Class: ${charClass}. Appearance: ${description}. Style: detailed fantasy portrait painting, dramatic lighting, dark moody background, shoulders-up framing, no text or labels, high quality digital art.`;
+          const prompt = `Generate a fantasy RPG character portrait. Race: ${race}. Class: ${charClass}. Appearance: ${description}. Style: detailed fantasy portrait painting, dramatic lighting, dark moody background, shoulders-up framing, no text or labels, high quality digital art.`;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseModalities: ["IMAGE", "TEXT"],
-        } as any,
-      } as any);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+              responseModalities: ["IMAGE", "TEXT"],
+            } as any,
+          } as any);
 
-      const parts = result.response.candidates?.[0]?.content?.parts ?? [];
-      for (const part of parts) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const inline = (part as any).inlineData as
-          | { mimeType: string; data: string }
-          | undefined;
-        if (inline?.data) {
-          return `data:${inline.mimeType};base64,${inline.data}`;
-        }
-      }
-
-      // Fallback to DALL-E
-      if (this.imageEnabled) {
-        const dallePrompt = `Fantasy RPG character portrait: ${race} ${charClass}. ${description}. Dark background, dramatic lighting, shoulders-up, detailed digital art, no text.`;
-        const response = await this.openai.images.generate({
-          model: "dall-e-3",
-          prompt: dallePrompt.slice(0, 4000),
-          n: 1,
-          size: "1024x1024",
-          quality: "standard",
-        });
-        return response.data?.[0]?.url ?? null;
-      }
-      return null;
+          return extractImageFromResponse(result);
+        },
+        2,
+        2000,
+      );
     } catch (error) {
       console.error("[GeminiAIService] Portrait generation failed:", error instanceof Error ? error.message : error);
       return null;

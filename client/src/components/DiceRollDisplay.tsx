@@ -17,7 +17,8 @@ export function DiceRollDisplay({ roll }: DiceRollDisplayProps) {
           ? styles.failure
           : "";
 
-  const isDamage = roll.purpose.toLowerCase().includes("damage");
+  const purposeLower = roll.purpose.toLowerCase();
+  const isDamage = purposeLower.includes("damage") || purposeLower.includes("schaden");
 
   return (
     <div className={`${styles.container} ${statusClass}`}>

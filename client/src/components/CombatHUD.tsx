@@ -8,8 +8,12 @@ interface CombatHUDProps {
 }
 
 export function CombatHUD({ combatState, character }: CombatHUDProps) {
-  const enemyHpPercent = Math.max(0, Math.min(100, (combatState.hp / combatState.maxHp) * 100));
-  const playerHpPercent = Math.max(0, Math.min(100, (character.hitPoints / character.maxHitPoints) * 100));
+  const enemyHpPercent = combatState.maxHp > 0
+    ? Math.max(0, Math.min(100, (combatState.hp / combatState.maxHp) * 100))
+    : 0;
+  const playerHpPercent = character.maxHitPoints > 0
+    ? Math.max(0, Math.min(100, (character.hitPoints / character.maxHitPoints) * 100))
+    : 0;
   const isDefeated = combatState.hp <= 0;
 
   return (

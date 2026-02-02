@@ -1,31 +1,34 @@
 .combatHud {
-  background: linear-gradient(180deg, rgba(220, 53, 69, 0.1) 0%, var(--color-surface-alt) 100%);
-  border: 1px solid rgba(220, 53, 69, 0.4);
+  background: linear-gradient(180deg, rgba(220, 53, 69, 0.08) 0%, var(--color-surface-alt) 100%);
+  border: 1px solid rgba(220, 53, 69, 0.3);
   border-radius: var(--radius-md);
   padding: var(--space-sm) var(--space-md);
-  margin-bottom: var(--space-md);
-  animation: combatSlideIn 0.5s ease-out;
+  margin-bottom: var(--space-sm);
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
+  animation: combatSlideIn 0.4s ease-out;
 }
 
 @keyframes combatSlideIn {
-  0% { opacity: 0; transform: translateY(-20px) scaleY(0.8); }
-  100% { opacity: 1; transform: translateY(0) scaleY(1); }
+  0% { opacity: 0; transform: translateY(-12px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 .combatTitle {
   text-align: center;
   font-family: var(--font-heading);
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 3px;
   color: #dc3545;
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--space-xs);
   animation: combatPulse 2s ease-in-out infinite;
 }
 
 @keyframes combatPulse {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 1; text-shadow: 0 0 8px rgba(220, 53, 69, 0.5); }
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; text-shadow: 0 0 6px rgba(220, 53, 69, 0.4); }
 }
 
 .combatants {
@@ -39,6 +42,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  min-width: 0;
 }
 
 .enemy {
@@ -53,7 +57,7 @@
 .combatantName {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -70,23 +74,23 @@
 
 .hpBarOuter {
   width: 100%;
-  height: 8px;
+  height: 6px;
   background: rgba(255, 255, 255, 0.06);
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .hpBarEnemy {
   height: 100%;
   background: linear-gradient(90deg, #dc3545, #ff6b6b);
-  border-radius: 4px;
+  border-radius: 3px;
   transition: width 0.6s ease;
 }
 
 .hpBarPlayer {
   height: 100%;
   background: linear-gradient(90deg, #37b24d, #51cf66);
-  border-radius: 4px;
+  border-radius: 3px;
   transition: width 0.6s ease;
   margin-left: auto;
 }
@@ -94,28 +98,28 @@
 .stats {
   display: flex;
   justify-content: space-between;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
 .vsIcon {
   font-family: var(--font-heading);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #ffd43b;
   flex-shrink: 0;
-  text-shadow: 0 0 10px rgba(255, 212, 59, 0.3);
+  text-shadow: 0 0 8px rgba(255, 212, 59, 0.3);
   padding: 0 2px;
 }
 
 /* Defeated state */
 .defeated .hpBarEnemy {
-  background: #666;
+  background: #555;
 }
 
 .defeated .combatantName {
-  color: #888;
+  color: #777;
   text-decoration: line-through;
 }
 
@@ -125,6 +129,6 @@
 }
 
 @keyframes flashRed {
-  0% { background-color: rgba(220, 53, 69, 0.2); }
+  0% { background-color: rgba(220, 53, 69, 0.15); }
   100% { background-color: transparent; }
 }

@@ -129,13 +129,15 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       // Single-pass: process notifications, combat state, and damage together
       const newNotifs: GameNotification[] = [];
       let newCombatState = state.combatState;
+      const ts = Date.now();
 
-      for (const evt of action.events) {
+      for (let ei = 0; ei < action.events.length; ei++) {
+        const evt = action.events[ei];
         const p = evt.payload as Record<string, unknown>;
         switch (evt.type) {
           case "item_acquired":
             newNotifs.push({
-              id: evt.turnId + "_acq_" + String(p.name ?? ""),
+              id: `${evt.turnId}_acq_${ei}_${ts}`,
               type: "item_acquired",
               text: String(p.name ?? "Gegenstand"),
               subtext: "Gegenstand erhalten",
@@ -144,7 +146,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             break;
           case "item_lost":
             newNotifs.push({
-              id: evt.turnId + "_lost_" + String(p.name ?? ""),
+              id: `${evt.turnId}_lost_${ei}_${ts}`,
               type: "item_lost",
               text: String(p.name ?? "Gegenstand"),
               subtext: "Gegenstand verloren",
@@ -153,7 +155,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
             break;
           case "level_up":
             newNotifs.push({
-              id: evt.turnId + "_levelup",
+              id: `${evt.turnId}_levelup_${ts}`,
               type: "level_up",
               text: `Stufe ${p.newLevel}!`,
               subtext: "Aufgestiegen!",
@@ -176,8 +178,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
       // XP notification
       if (action.xpGained > 0) {
+        const turnId = action.events[0]?.turnId ?? "turn";
         newNotifs.unshift({
-          id: action.events[0]?.turnId + "_xp_" + action.xpGained,
+          id: `${turnId}_xp_${action.xpGained}_${ts}`,
           type: "xp_gained",
           text: `+${action.xpGained} XP`,
           color: "#51cf66",
@@ -188,7 +191,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       if (newCombatState) {
         let totalDamage = 0;
         for (const roll of action.diceRolls) {
-          if (roll.purpose.toLowerCase().includes("damage") && roll.total > 0) {
+          const purposeLower = roll.purpose.toLowerCase();
+          if ((purposeLower.includes("damage") || purposeLower.includes("schaden")) && roll.total > 0) {
             totalDamage += roll.total;
           }
         }

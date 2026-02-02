@@ -13,6 +13,9 @@ export function Typewriter({ text, speed = 18, onComplete, className }: Typewrit
   const [skipped, setSkipped] = useState(false);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
+  // Stable ref for onComplete to avoid re-triggering the effect on every render
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     setDisplayedLength(0);
@@ -23,12 +26,12 @@ export function Typewriter({ text, speed = 18, onComplete, className }: Typewrit
   useEffect(() => {
     if (skipped) {
       setDisplayedLength(text.length);
-      onComplete?.();
+      onCompleteRef.current?.();
       return;
     }
 
     if (displayedLength >= text.length) {
-      onComplete?.();
+      onCompleteRef.current?.();
       return;
     }
 
@@ -40,11 +43,11 @@ export function Typewriter({ text, speed = 18, onComplete, className }: Typewrit
         lastTimeRef.current = timestamp;
         setDisplayedLength((prev) => {
           let next = prev + 1;
-          // Skip faster through whitespace
-          while (next < text.length && text[next] === " ") {
+          // Skip through single spaces but not multiple
+          if (next < text.length && text[next] === " " && text[next - 1] !== " ") {
             next++;
           }
-          return next;
+          return Math.min(next, text.length);
         });
       }
 
@@ -53,7 +56,7 @@ export function Typewriter({ text, speed = 18, onComplete, className }: Typewrit
 
     rafRef.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [text, speed, displayedLength, skipped, onComplete]);
+  }, [text, speed, displayedLength, skipped]);
 
   const handleClick = useCallback(() => {
     if (displayedLength < text.length) {

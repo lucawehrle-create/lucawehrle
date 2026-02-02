@@ -1,3 +1,8 @@
+.typingArea {
+  cursor: pointer;
+  position: relative;
+}
+
 .cursor {
   display: inline;
   color: var(--mood-primary);
@@ -9,4 +14,19 @@
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
+}
+
+.skipHint {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-top: var(--space-sm);
+  opacity: 0;
+  animation: hintFadeIn 0.5s ease 2s forwards;
+  pointer-events: none;
+}
+
+@keyframes hintFadeIn {
+  from { opacity: 0; }
+  to { opacity: 0.6; }
 }

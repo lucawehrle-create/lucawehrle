@@ -58,6 +58,84 @@
   font-size: 0.8rem;
   color: var(--color-text-muted);
   border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fullBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #dc3545;
+  background: rgba(220, 53, 69, 0.15);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 1px;
+}
+
+/* Filter and sort bar */
+.filterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xs) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+  gap: var(--space-xs);
+}
+
+.filterTabs {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.filterTab {
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.filterTab:hover {
+  color: var(--color-text);
+  background: var(--color-surface-alt);
+}
+
+.filterTabActive {
+  color: var(--mood-primary);
+  background: var(--mood-glow);
+  border-color: var(--mood-primary);
+}
+
+.filterCount {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+.sortButton {
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sortButton:hover {
+  border-color: var(--mood-primary);
+  color: var(--mood-primary);
 }
 
 .itemList {
@@ -86,10 +164,21 @@
   flex-direction: column;
   gap: var(--space-xs);
   transition: background var(--transition-fast);
+  cursor: pointer;
 }
 
 .itemCard:hover {
   background: var(--color-surface);
+}
+
+.itemCardExpanded {
+  background: var(--color-surface);
+  border-left-width: 4px;
+}
+
+.itemDescExpanded {
+  -webkit-line-clamp: unset;
+  display: block;
 }
 
 .itemRow {

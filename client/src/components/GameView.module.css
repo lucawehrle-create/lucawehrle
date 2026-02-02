@@ -297,6 +297,7 @@
   padding: var(--space-sm) var(--space-md);
   background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-text);
   text-align: left;
@@ -308,10 +309,40 @@
 }
 
 .optionButton:hover {
-  border-color: var(--mood-primary);
   background: var(--mood-glow);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Type-based accent colors */
+.optionType_combat { border-left-color: #dc3545; }
+.optionType_combat:hover { border-color: #dc3545; }
+
+.optionType_social { border-left-color: #51cf66; }
+.optionType_social:hover { border-color: #51cf66; }
+
+.optionType_exploration { border-left-color: #339af0; }
+.optionType_exploration:hover { border-color: #339af0; }
+
+.optionType_skill { border-left-color: #ffd43b; }
+.optionType_skill:hover { border-color: #ffd43b; }
+
+.optionType_magic { border-left-color: #b197fc; }
+.optionType_magic:hover { border-color: #b197fc; }
+
+.optionType_item { border-left-color: #868e96; }
+.optionType_item:hover { border-color: #868e96; }
+
+/* DC badge */
+.dcBadge {
+  font-size: 0.6rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
 }
 
 .optionHeader {

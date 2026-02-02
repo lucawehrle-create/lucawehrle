@@ -24,6 +24,17 @@ const ACTION_TYPE_ICONS: Record<string, string> = {
   stealth: "\uD83E\uDD77",
 };
 
+const ACTION_TYPE_LABELS: Record<string, string> = {
+  combat: "Kampf",
+  social: "Dialog",
+  exploration: "Erkundung",
+  skill: "Geschick",
+  magic: "Magie",
+  item: "Gegenstand",
+  defend: "Verteidigung",
+  stealth: "Schleichen",
+};
+
 export function GameView() {
   const { state, dispatch } = useGame();
   const [freeText, setFreeText] = useState("");
@@ -39,12 +50,16 @@ export function GameView() {
     narrativeEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [state.turns.length]);
 
-  // Auto-dismiss notifications after 5 seconds
+  // Auto-dismiss notifications with type-based timing
   useEffect(() => {
     if (state.notifications.length === 0) return;
+    const notif = state.notifications[0];
+    const delay = notif.type === "level_up" ? 8000
+      : notif.type === "xp_gained" ? 3000
+      : 5000;
     const timer = setTimeout(() => {
-      dispatch({ type: "DISMISS_NOTIFICATION", id: state.notifications[0].id });
-    }, 5000);
+      dispatch({ type: "DISMISS_NOTIFICATION", id: notif.id });
+    }, delay);
     return () => clearTimeout(timer);
   }, [state.notifications, dispatch]);
 
@@ -243,14 +258,19 @@ export function GameView() {
             {currentTurn.options.map((option, index) => (
               <button
                 key={option.id}
-                className={styles.optionButton}
+                className={`${styles.optionButton} ${styles[`optionType_${option.type}`] ?? ""}`}
                 onClick={() => handleOptionClick(option)}
               >
                 <div className={styles.optionHeader}>
                   <span className={styles.optionIcon}>
                     {ACTION_TYPE_ICONS[option.type] ?? "\u25B6\uFE0F"}
                   </span>
-                  <span className={styles.optionType}>{option.type}</span>
+                  <span className={styles.optionType}>
+                    {ACTION_TYPE_LABELS[option.type] ?? option.type}
+                  </span>
+                  {option.difficultyClass && (
+                    <span className={styles.dcBadge}>SG {option.difficultyClass}</span>
+                  )}
                   <kbd className={styles.shortcutKey}>{index + 1}</kbd>
                 </div>
                 <span className={styles.optionText}>{option.text}</span>

@@ -17,6 +17,8 @@ export function DiceRollDisplay({ roll }: DiceRollDisplayProps) {
           ? styles.failure
           : "";
 
+  const isDamage = roll.purpose.toLowerCase().includes("damage");
+
   return (
     <div className={`${styles.container} ${statusClass}`}>
       <div className={styles.diceIcon}>
@@ -33,11 +35,18 @@ export function DiceRollDisplay({ roll }: DiceRollDisplayProps) {
           {roll.results.length > 1 && (
             <span className={styles.individual}> ({roll.results.join(", ")})</span>
           )}
+          {isDamage && <span className={styles.damageLabel}> Schaden</span>}
         </div>
       </div>
       {roll.success !== undefined && (
         <div className={styles.result}>
-          {roll.criticalHit ? "CRIT!" : roll.criticalFail ? "FUMBLE!" : roll.success ? "Pass" : "Fail"}
+          {roll.criticalHit
+            ? "KRIT!"
+            : roll.criticalFail
+              ? "PATZER!"
+              : roll.success
+                ? "Erfolg"
+                : "Fehlschlag"}
         </div>
       )}
     </div>

@@ -57,9 +57,10 @@ export function Typewriter({ text, speed = 18, onComplete, className }: Typewrit
   const isTyping = displayedLength < text.length && !skipped;
 
   return (
-    <span className={className} onClick={handleClick} title={isTyping ? "Click to skip" : ""}>
+    <span className={`${className ?? ""} ${isTyping ? styles.typingArea : ""}`} onClick={handleClick}>
       {text.slice(0, displayedLength)}
       {isTyping && <span className={styles.cursor}>|</span>}
+      {isTyping && <span className={styles.skipHint}>Klicken zum Ueberspringen</span>}
     </span>
   );
 }

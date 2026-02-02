@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { getTurnImage, getCharacters } from "../services/api.js";
 
 /**
- * Polls for a scene image that's being generated asynchronously.
- * Returns the imageUrl when available, or null while loading.
+ * Polls for a scene image with exponential backoff.
+ * Starts at 500ms, doubles each attempt up to 4s cap, max 45s total.
  */
 export function useSceneImage(
   sessionId: string | undefined,
@@ -15,7 +15,6 @@ export function useSceneImage(
   const attemptsRef = useRef(0);
 
   useEffect(() => {
-    // Reset when turn changes
     setImageUrl(initialUrl ?? null);
     setIsLoading(!initialUrl);
     attemptsRef.current = 0;
@@ -25,7 +24,9 @@ export function useSceneImage(
     if (!sessionId || !turnId || imageUrl) return;
 
     let cancelled = false;
-    const maxAttempts = 20; // 20 * 1.5s = 30s max
+    let timerId: ReturnType<typeof setTimeout>;
+    const maxTime = 45_000;
+    const startTime = Date.now();
 
     async function poll() {
       try {
@@ -39,15 +40,17 @@ export function useSceneImage(
         // Ignore network errors, keep polling
       }
       attemptsRef.current++;
-      if (!cancelled && attemptsRef.current < maxAttempts) {
-        timerId = setTimeout(poll, 1500);
+      const elapsed = Date.now() - startTime;
+      if (!cancelled && elapsed < maxTime) {
+        // Exponential backoff: 500ms, 1s, 2s, 4s (capped)
+        const delay = Math.min(4000, 500 * Math.pow(2, attemptsRef.current - 1));
+        timerId = setTimeout(poll, delay);
       } else if (!cancelled) {
         setIsLoading(false);
       }
     }
 
-    // Start first poll immediately (after a tiny delay for server processing)
-    let timerId: ReturnType<typeof setTimeout> = setTimeout(poll, 500);
+    timerId = setTimeout(poll, 500);
 
     return () => {
       cancelled = true;
@@ -59,8 +62,8 @@ export function useSceneImage(
 }
 
 /**
- * Polls for a character portrait that's being generated asynchronously.
- * Checks the characters list until the portraitUrl appears.
+ * Polls for a character portrait with exponential backoff.
+ * Starts at 2s, doubles up to 8s cap, max 45s total.
  */
 export function useCharacterPortrait(
   userId: string | undefined,
@@ -78,29 +81,38 @@ export function useCharacterPortrait(
   useEffect(() => {
     if (!userId || !characterId || portraitUrl) return;
 
-    const maxAttempts = 15;
-    const interval = setInterval(async () => {
-      attemptsRef.current++;
-      if (attemptsRef.current > maxAttempts) {
-        clearInterval(interval);
-        return;
-      }
+    let cancelled = false;
+    let timerId: ReturnType<typeof setTimeout>;
+    const maxTime = 45_000;
+    const startTime = Date.now();
 
+    async function poll() {
+      attemptsRef.current++;
       try {
-        const result = await getCharacters(userId);
-        if (result.success && result.data) {
+        const result = await getCharacters(userId!);
+        if (!cancelled && result.success && result.data) {
           const char = result.data.find((c) => c.id === characterId);
           if (char?.portraitUrl) {
             setPortraitUrl(char.portraitUrl);
-            clearInterval(interval);
+            return;
           }
         }
       } catch {
         // Ignore, keep polling
       }
-    }, 3000);
+      const elapsed = Date.now() - startTime;
+      if (!cancelled && elapsed < maxTime) {
+        const delay = Math.min(8000, 2000 * Math.pow(2, attemptsRef.current - 1));
+        timerId = setTimeout(poll, delay);
+      }
+    }
 
-    return () => clearInterval(interval);
+    timerId = setTimeout(poll, 2000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timerId);
+    };
   }, [userId, characterId, portraitUrl]);
 
   return portraitUrl;

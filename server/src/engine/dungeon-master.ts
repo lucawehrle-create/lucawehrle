@@ -167,18 +167,18 @@ export class DungeonMaster {
       }
     }
 
-    // Retrieve relevant memories
-    const memories = await this.memoryService.queryMemories({
-      sessionId: session.id,
-      queryText: action.text,
-      maxResults: 5,
-      minImportance: 0.3,
-    });
+    // Retrieve memories and context summary in parallel
+    const [memories, contextSummary] = await Promise.all([
+      this.memoryService.queryMemories({
+        sessionId: session.id,
+        queryText: action.text,
+        maxResults: 5,
+        minImportance: 0.3,
+      }),
+      this.memoryService.getContextSummary(session.id),
+    ]);
 
     const memoryContext = memories.map((m) => m.content).join("\n");
-
-    // Get context summary
-    const contextSummary = await this.memoryService.getContextSummary(session.id);
 
     // Build AI prompt context
     const characterSummary = this.buildCharacterSummary(character);

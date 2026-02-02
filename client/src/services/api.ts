@@ -21,7 +21,7 @@ const API_BASE = "/api";
 
 async function request<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<ApiResponse<T>> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -34,12 +34,37 @@ async function request<T>(
     headers["x-user-id"] = userId;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-  });
+  const maxAttempts = 3;
+  let lastError: unknown;
 
-  return response.json() as Promise<ApiResponse<T>>;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const response = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+        signal: AbortSignal.timeout(10_000),
+      });
+      return (await response.json()) as ApiResponse<T>;
+    } catch (error) {
+      lastError = error;
+      // Only retry on network errors (TypeError) or timeout (TimeoutError)
+      const isRetryable =
+        error instanceof TypeError ||
+        (error instanceof DOMException && error.name === "TimeoutError");
+      if (!isRetryable || attempt === maxAttempts - 1) break;
+      // Exponential backoff: 1s, 2s
+      await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+    }
+  }
+
+  // All retries exhausted — return error response
+  return {
+    success: false,
+    error: {
+      code: "NETWORK_ERROR",
+      message: lastError instanceof Error ? lastError.message : "Network error",
+    },
+  };
 }
 
 // --- User API ---

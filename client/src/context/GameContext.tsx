@@ -126,75 +126,77 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case "SET_INVENTORY":
       return { ...state, inventory: action.inventory };
     case "PROCESS_EVENTS": {
+      // Single-pass: process notifications, combat state, and damage together
       const newNotifs: GameNotification[] = [];
+      let newCombatState = state.combatState;
 
       for (const evt of action.events) {
-        if (evt.type === "item_acquired") {
-          const p = evt.payload as Record<string, unknown>;
-          const rarity = String(p.rarity ?? "common");
-          newNotifs.push({
-            id: evt.turnId + "_acq_" + String(p.name ?? ""),
-            type: "item_acquired",
-            text: String(p.name ?? "Gegenstand"),
-            subtext: "Gegenstand erhalten",
-            color: RARITY_COLORS[rarity] ?? "#adb5bd",
-          });
-        } else if (evt.type === "item_lost") {
-          const p = evt.payload as Record<string, unknown>;
-          newNotifs.push({
-            id: evt.turnId + "_lost_" + String(p.name ?? ""),
-            type: "item_lost",
-            text: String(p.name ?? "Gegenstand"),
-            subtext: "Gegenstand verloren",
-            color: "#dc3545",
-          });
-        } else if (evt.type === "level_up") {
-          const p = evt.payload as Record<string, unknown>;
-          newNotifs.push({
-            id: evt.turnId + "_levelup",
-            type: "level_up",
-            text: `Stufe ${p.newLevel}!`,
-            subtext: "Aufgestiegen!",
-            color: "#ffd43b",
-          });
+        const p = evt.payload as Record<string, unknown>;
+        switch (evt.type) {
+          case "item_acquired":
+            newNotifs.push({
+              id: evt.turnId + "_acq_" + String(p.name ?? ""),
+              type: "item_acquired",
+              text: String(p.name ?? "Gegenstand"),
+              subtext: "Gegenstand erhalten",
+              color: RARITY_COLORS[String(p.rarity ?? "common")] ?? "#adb5bd",
+            });
+            break;
+          case "item_lost":
+            newNotifs.push({
+              id: evt.turnId + "_lost_" + String(p.name ?? ""),
+              type: "item_lost",
+              text: String(p.name ?? "Gegenstand"),
+              subtext: "Gegenstand verloren",
+              color: "#dc3545",
+            });
+            break;
+          case "level_up":
+            newNotifs.push({
+              id: evt.turnId + "_levelup",
+              type: "level_up",
+              text: `Stufe ${p.newLevel}!`,
+              subtext: "Aufgestiegen!",
+              color: "#ffd43b",
+            });
+            break;
+          case "combat_start":
+            newCombatState = {
+              name: String(p.enemy ?? "Gegner"),
+              hp: Number(p.enemyHp ?? 30),
+              maxHp: Number(p.enemyMaxHp ?? 30),
+              ac: Number(p.enemyAc ?? 15),
+            };
+            break;
+          case "combat_end":
+            newCombatState = null;
+            break;
         }
       }
 
-      // XP notification (always show if XP was gained)
+      // XP notification
       if (action.xpGained > 0) {
         newNotifs.unshift({
-          id: Date.now() + "_xp",
+          id: action.events[0]?.turnId + "_xp_" + action.xpGained,
           type: "xp_gained",
           text: `+${action.xpGained} XP`,
           color: "#51cf66",
         });
       }
 
-      // Track combat state
-      let newCombatState = state.combatState;
-      for (const evt of action.events) {
-        if (evt.type === "combat_start") {
-          const p = evt.payload as Record<string, unknown>;
-          newCombatState = {
-            name: String(p.enemy ?? "Gegner"),
-            hp: Number(p.enemyHp ?? 30),
-            maxHp: Number(p.enemyMaxHp ?? 30),
-            ac: Number(p.enemyAc ?? 15),
-          };
-        } else if (evt.type === "combat_end") {
-          newCombatState = null;
-        }
-      }
-
-      // Subtract damage from enemy HP when in combat
+      // Apply damage from dice rolls to enemy HP
       if (newCombatState) {
+        let totalDamage = 0;
         for (const roll of action.diceRolls) {
           if (roll.purpose.toLowerCase().includes("damage") && roll.total > 0) {
-            newCombatState = {
-              ...newCombatState,
-              hp: Math.max(0, newCombatState.hp - roll.total),
-            };
+            totalDamage += roll.total;
           }
+        }
+        if (totalDamage > 0) {
+          newCombatState = {
+            ...newCombatState,
+            hp: Math.max(0, newCombatState.hp - totalDamage),
+          };
         }
       }
 

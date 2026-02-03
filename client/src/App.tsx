@@ -1,5 +1,6 @@
 import React from "react";
 import { GameProvider, useGame } from "./context/GameContext.js";
+import { LandingPage } from "./components/LandingPage.js";
 import { LoginScreen } from "./components/LoginScreen.js";
 import { CharacterSelect } from "./components/CharacterSelect.js";
 import { CharacterCreate } from "./components/CharacterCreate.js";
@@ -10,7 +11,7 @@ import { Settings } from "./components/Settings.js";
 import styles from "./App.module.css";
 
 function AppContent() {
-  const { state } = useGame();
+  const { state, dispatch } = useGame();
 
   return (
     <div className={styles.app}>
@@ -21,6 +22,9 @@ function AppContent() {
         </div>
       )}
 
+      {state.view === "landing" && (
+        <LandingPage onEnter={() => dispatch({ type: "SET_VIEW", view: "login" })} />
+      )}
       {state.view === "login" && <LoginScreen />}
       {state.view === "character_select" && <CharacterSelect />}
       {state.view === "character_create" && <CharacterCreate />}

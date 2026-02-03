@@ -23,6 +23,7 @@ export interface GameNotification {
 
 /** Application view state */
 export type AppView =
+  | "landing"
   | "login"
   | "character_select"
   | "character_create"
@@ -80,7 +81,7 @@ const RARITY_COLORS: Record<string, string> = {
 };
 
 const initialState: GameState = {
-  view: "login",
+  view: "landing",
   user: null,
   characters: [],
   selectedCharacter: null,

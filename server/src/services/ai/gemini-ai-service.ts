@@ -244,4 +244,46 @@ export class GeminiAIService implements AIService {
       return parseJSON(rawText, OBJECT_SCAN_FALLBACK);
     });
   }
+
+  async generateJourneyNarrative(
+    characterName: string,
+    characterBackstory: string,
+    characterTraits: string[],
+    scenarioTitle: string,
+    scenarioSetting: string,
+  ): Promise<string> {
+    return withRetry(async () => {
+      const model = this.genAI.getGenerativeModel({
+        model: this.textModel,
+      });
+
+      const prompt = `Du bist ein Erzähler für ein Fantasy-RPG. Schreibe einen kurzen, atmosphärischen Text (2-3 Sätze, maximal 60 Wörter) auf Deutsch, der erklärt, WIE der Charakter an diesen Ort gekommen ist.
+
+CHARAKTER:
+- Name: ${characterName}
+- Hintergrund: ${characterBackstory}
+- Eigenschaften: ${characterTraits.join(", ")}
+
+SZENARIO:
+- Titel: "${scenarioTitle}"
+- Setting: ${scenarioSetting}
+
+REGELN:
+- Schreibe in der 3. Person ("${characterName} hatte...")
+- Verbinde die Charaktergeschichte mit dem Szenario
+- Atmosphärisch und immersiv
+- KEIN JSON, nur der reine Text
+- Auf Deutsch`;
+
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+
+      // Fallback if empty
+      if (!text) {
+        return `${characterName} hatte lange nach diesem Ort gesucht. "${scenarioTitle}" — ein Name, der in Tavernen geflüstert wurde. Nun stand das Abenteuer unmittelbar bevor.`;
+      }
+
+      return text;
+    });
+  }
 }

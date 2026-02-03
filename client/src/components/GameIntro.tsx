@@ -59,10 +59,10 @@ const INTRO_LINES = [
 
 export function GameIntro() {
   const { state, dispatch } = useGame();
-  const { selectedCharacter: character, session, turns } = state;
+  const { selectedCharacter: character, session, turns, journeyNarrative } = state;
 
   const [phase, setPhase] = useState<"fade_in" | "portrait" | "story" | "ready">("fade_in");
-  const [storyRevealed, setStoryRevealed] = useState(0);
+  const [journeyRevealed, setJourneyRevealed] = useState(0);
 
   const introLine = useMemo(
     () => INTRO_LINES[Math.floor(Math.random() * INTRO_LINES.length)],
@@ -71,6 +71,9 @@ export function GameIntro() {
 
   const firstTurn = turns[0];
   const scenario = state.scenarios.find(s => s.id === session?.scenario);
+
+  // The journey narrative (AI-generated) takes priority over static backstory
+  const storyText = journeyNarrative || character?.backstory || "";
 
   // Phase transitions
   useEffect(() => {
@@ -86,20 +89,20 @@ export function GameIntro() {
     return () => timers.forEach(clearTimeout);
   }, []);
 
-  // Typewriter effect for backstory
+  // Typewriter effect for journey narrative
   useEffect(() => {
     if (phase !== "story" && phase !== "ready") return;
-    if (!character?.backstory) return;
+    if (!storyText) return;
 
-    const words = character.backstory.split(" ");
-    if (storyRevealed >= words.length) return;
+    const words = storyText.split(" ");
+    if (journeyRevealed >= words.length) return;
 
     const timer = setTimeout(() => {
-      setStoryRevealed(prev => Math.min(prev + 1, words.length));
-    }, 60);
+      setJourneyRevealed(prev => Math.min(prev + 1, words.length));
+    }, 70);
 
     return () => clearTimeout(timer);
-  }, [phase, storyRevealed, character?.backstory]);
+  }, [phase, journeyRevealed, storyText]);
 
   const handleBeginAdventure = useCallback(() => {
     dispatch({ type: "SET_VIEW", view: "game" });
@@ -123,8 +126,8 @@ export function GameIntro() {
     return null;
   }
 
-  const backstoryWords = character.backstory?.split(" ") ?? [];
-  const visibleBackstory = backstoryWords.slice(0, storyRevealed).join(" ");
+  const storyWords = storyText.split(" ");
+  const visibleStory = storyWords.slice(0, journeyRevealed).join(" ");
 
   return (
     <div className={styles.container} data-phase={phase}>
@@ -170,15 +173,15 @@ export function GameIntro() {
 
         {/* Story section */}
         <div className={`${styles.storySection} ${phase === "fade_in" || phase === "portrait" ? styles.hidden : ""}`}>
-          {/* Backstory */}
+          {/* Journey narrative - "How you got here" */}
           <div className={styles.backstoryCard}>
             <h2 className={styles.sectionTitle}>
-              <span className={styles.titleIcon}>{"\uD83D\uDCDC"}</span>
-              Deine Geschichte
+              <span className={styles.titleIcon}>{"\uD83D\uDDFA\uFE0F"}</span>
+              {journeyNarrative ? "Wie du hierher kamst" : "Deine Geschichte"}
             </h2>
             <p className={styles.backstory}>
-              {visibleBackstory}
-              {storyRevealed < backstoryWords.length && (
+              {visibleStory}
+              {journeyRevealed < storyWords.length && (
                 <span className={styles.cursor}>|</span>
               )}
             </p>

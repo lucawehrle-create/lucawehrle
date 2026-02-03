@@ -149,11 +149,33 @@ export function createGameRoutes(
       store.createSession(session);
       store.addTurn(firstTurn);
 
-      // Generate character portrait if not already present (parallel with scene image)
-      const imagePromises: Promise<void>[] = [];
+      // Generate assets in parallel: portrait, scene image, and journey narrative
+      const generationPromises: Promise<void>[] = [];
+      let journeyNarrative = "";
 
+      // Generate "how you got here" narrative
+      generationPromises.push(
+        aiService
+          .generateJourneyNarrative(
+            character.name,
+            character.backstory,
+            character.traits,
+            scenario.title,
+            scenario.setting ?? scenario.description,
+          )
+          .then((narrative) => {
+            journeyNarrative = narrative;
+            console.log(`[GameRoutes] Journey narrative generated for ${character.name}`);
+          })
+          .catch((err) => {
+            console.error("[GameRoutes] Journey narrative generation failed:", err instanceof Error ? err.message : err);
+            journeyNarrative = `${character.name} hatte lange nach diesem Ort gesucht. "${scenario.title}" — nun stand das Abenteuer unmittelbar bevor.`;
+          }),
+      );
+
+      // Generate character portrait if not already present
       if (!character.portraitUrl) {
-        imagePromises.push(
+        generationPromises.push(
           aiService
             .generatePortrait(
               buildCharacterAppearance(character),
@@ -175,7 +197,7 @@ export function createGameRoutes(
 
       // Generate opening scene image (first turn always gets an image)
       if (firstTurn.imagePrompt) {
-        imagePromises.push(
+        generationPromises.push(
           aiService
             .generateImage({
               prompt: firstTurn.imagePrompt,
@@ -198,12 +220,12 @@ export function createGameRoutes(
         );
       }
 
-      // Wait for all image generation to complete
-      await Promise.all(imagePromises);
+      // Wait for all generation to complete
+      await Promise.all(generationPromises);
 
-      const response: ApiResponse<{ session: GameSession; turn: GameTurn; character: Character }> = {
+      const response: ApiResponse<{ session: GameSession; turn: GameTurn; character: Character; journeyNarrative: string }> = {
         success: true,
-        data: { session, turn: firstTurn, character },
+        data: { session, turn: firstTurn, character, journeyNarrative },
       };
       res.status(201).json(response);
     } catch (error) {

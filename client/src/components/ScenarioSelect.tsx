@@ -46,6 +46,7 @@ export function ScenarioSelect() {
         session: result.data.session,
         turn: result.data.turn,
         character: result.data.character,
+        journeyNarrative: result.data.journeyNarrative,
       });
     } else {
       dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Sitzung konnte nicht gestartet werden" });

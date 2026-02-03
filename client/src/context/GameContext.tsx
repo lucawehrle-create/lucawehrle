@@ -45,6 +45,7 @@ export interface GameState {
   notifications: GameNotification[];
   combatState: CombatantInfo | null;
   mood: SceneMood;
+  journeyNarrative: string | null;
   isLoading: boolean;
   error: string | null;
 }
@@ -56,7 +57,7 @@ export type GameAction =
   | { type: "SET_CHARACTERS"; characters: Character[] }
   | { type: "SELECT_CHARACTER"; character: Character }
   | { type: "SET_SCENARIOS"; scenarios: ScenarioTemplate[] }
-  | { type: "START_SESSION"; session: GameSession; turn: GameTurn; character?: Character }
+  | { type: "START_SESSION"; session: GameSession; turn: GameTurn; character?: Character; journeyNarrative?: string }
   | { type: "ADD_TURN"; turn: GameTurn }
   | { type: "UPDATE_SESSION"; session: GameSession }
   | { type: "UPDATE_CHARACTER"; character: Character }
@@ -90,6 +91,7 @@ const initialState: GameState = {
   notifications: [],
   combatState: null,
   mood: "exploration",
+  journeyNarrative: null,
   isLoading: false,
   error: null,
 };
@@ -113,6 +115,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         turns: [action.turn],
         mood: action.turn.mood,
         selectedCharacter: action.character ?? state.selectedCharacter,
+        journeyNarrative: action.journeyNarrative ?? null,
         view: "game_intro",
       };
     case "ADD_TURN":
@@ -234,6 +237,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         notifications: [],
         combatState: null,
         mood: "exploration",
+        journeyNarrative: null,
         view: "character_select",
         error: null,
       };

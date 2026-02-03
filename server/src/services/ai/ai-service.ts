@@ -26,6 +26,15 @@ export interface AIService {
 
   /** Analyze a scanned real-world object */
   analyzeObject(request: ObjectScanRequest): Promise<ObjectScanResponse>;
+
+  /** Generate a "journey narrative" that connects character backstory to the scenario */
+  generateJourneyNarrative(
+    characterName: string,
+    characterBackstory: string,
+    characterTraits: string[],
+    scenarioTitle: string,
+    scenarioSetting: string,
+  ): Promise<string>;
 }
 
 /**
@@ -135,6 +144,21 @@ export class MockAIService implements AIService {
 
   async generatePortrait(_description: string, _race: string, charClass: string): Promise<string | null> {
     return `https://placehold.co/256x256/1a1a2e/e0e0e0?text=${encodeURIComponent(charClass)}`;
+  }
+
+  async generateJourneyNarrative(
+    characterName: string,
+    _characterBackstory: string,
+    _characterTraits: string[],
+    scenarioTitle: string,
+    _scenarioSetting: string,
+  ): Promise<string> {
+    const templates = [
+      `Nach wochenlanger Reise erreichte ${characterName} endlich das Ziel. Die Geschichten, die man sich über "${scenarioTitle}" erzählte, hatten sich als wahr erwiesen — und nun stand das Abenteuer unmittelbar bevor.`,
+      `${characterName} hatte lange nach diesem Ort gesucht. "${scenarioTitle}" — ein Name, der in Tavernen geflüstert und auf vergilbten Karten markiert wurde. Heute würde sich zeigen, ob die Legenden stimmten.`,
+      `Das Schicksal hatte ${characterName} hierhergeführt. Ob durch Zufall oder Vorsehung — "${scenarioTitle}" wartete, und es gab kein Zurück mehr.`,
+    ];
+    return templates[Math.floor(Math.random() * templates.length)];
   }
 
   async analyzeObject(request: ObjectScanRequest): Promise<ObjectScanResponse> {

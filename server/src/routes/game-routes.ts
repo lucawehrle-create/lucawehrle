@@ -195,30 +195,33 @@ export function createGameRoutes(
         );
       }
 
-      // Generate opening scene image (first turn always gets an image)
-      if (firstTurn.imagePrompt) {
-        generationPromises.push(
-          aiService
-            .generateImage({
-              prompt: firstTurn.imagePrompt,
-              characterAppearance: buildCharacterAppearance(character),
-              mood: firstTurn.mood,
-              style: "fantasy_painting",
-              modelTier: "standard",
-            })
-            .then((imageResult) => {
-              if (imageResult.imageUrl) {
-                firstTurn.imageUrl = imageResult.imageUrl;
-                console.log(`[GameRoutes] Opening scene image generated for session ${session.id}`);
-              } else {
-                console.warn(`[GameRoutes] Opening scene image returned empty for session ${session.id}`);
-              }
-            })
-            .catch((err) => {
-              console.error("[GameRoutes] Opening scene image generation failed:", err instanceof Error ? err.message : err);
-            }),
-        );
-      }
+      // Generate opening scene image (first turn ALWAYS gets an image)
+      // Use AI's imagePrompt if provided, otherwise generate a fallback from scenario
+      const openingImagePrompt = firstTurn.imagePrompt
+        || `${scenario.setting || scenario.description}. Fantasy RPG scene, dramatic lighting, cinematic composition, atmospheric ${firstTurn.mood} mood.`;
+
+      generationPromises.push(
+        aiService
+          .generateImage({
+            prompt: openingImagePrompt,
+            characterAppearance: buildCharacterAppearance(character),
+            mood: firstTurn.mood,
+            style: "fantasy_painting",
+            modelTier: "standard",
+          })
+          .then((imageResult) => {
+            if (imageResult.imageUrl) {
+              firstTurn.imageUrl = imageResult.imageUrl;
+              firstTurn.imagePrompt = openingImagePrompt; // Ensure imagePrompt is set for polling logic
+              console.log(`[GameRoutes] Opening scene image generated for session ${session.id}`);
+            } else {
+              console.warn(`[GameRoutes] Opening scene image returned empty for session ${session.id}`);
+            }
+          })
+          .catch((err) => {
+            console.error("[GameRoutes] Opening scene image generation failed:", err instanceof Error ? err.message : err);
+          }),
+      );
 
       // Wait for all generation to complete
       await Promise.all(generationPromises);

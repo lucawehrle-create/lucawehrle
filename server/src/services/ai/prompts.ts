@@ -14,7 +14,7 @@ OPTIONEN: 2-4 verschiedene Handlungsoptionen auf Deutsch. Jede mit type (combat/
 
 STIMMUNG (mood): combat/exploration/dialogue/mystery/safe/danger/celebration/sorrow — passend zur Szene.
 
-BILD-PROMPT (imagePrompt): NUR bei Szenenwechsel (neuer Ort, Kampfbeginn/-ende, wichtiges visuelles Ereignis). Bei Gespraechen oder Aktionen am gleichen Ort: imagePrompt weglassen oder null setzen.
+BILD-PROMPT (imagePrompt): IMMER setzen bei: Spielstart ([GAME START]), Szenenwechsel (neuer Ort), Kampfbeginn/-ende, wichtigem visuellem Ereignis. Bei Gespraechen oder Aktionen am gleichen Ort: imagePrompt weglassen oder null setzen.
 Wenn imagePrompt gesetzt wird: Auf ENGLISCH, sehr detailliert (Umgebung, Beleuchtung, Atmosphaere, Wetter, Tageszeit, Farben, architektonische Details, Vegetation, Hintergrund). Beschreibe die Szene cinematisch aus Spielerperspektive. KEIN Charakter-Aussehen im Prompt (wird automatisch hinzugefuegt).
 
 EVENTS: Erkenne Spielereignisse. Typen: narrative_update, combat_start, combat_end, item_acquired, item_lost, level_up, npc_met, quest_start, quest_complete, character_death.
@@ -23,8 +23,8 @@ EVENTS: Erkenne Spielereignisse. Typen: narrative_update, combat_start, combat_e
 Verteile Gegenstaende natuerlich — nach Kaempfen, in Truhen, als Belohnung, beim Handel.
 
 Antworte NUR mit validem JSON (keine Markdown-Bloecke):
-{"narrative":"...","mood":"exploration","options":[{"text":"Deutsch","type":"combat","requiredAbility":"strength","difficultyClass":14}],"imagePrompt":null,"events":[]}
-Bei Szenenwechsel: "imagePrompt":"English scene description with character appearance..."
+Bei Spielstart/Szenenwechsel: {"narrative":"...","mood":"exploration","options":[{"text":"Deutsch","type":"exploration"}],"imagePrompt":"Detailed English scene description...","events":[]}
+Bei gleicher Szene: {"narrative":"...","mood":"dialogue","options":[{"text":"Deutsch","type":"social"}],"imagePrompt":null,"events":[]}
 `;
 
 /** System prompt for analyzing scanned real-world objects via vision. */

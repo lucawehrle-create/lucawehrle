@@ -1,0 +1,506 @@
+.container {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, #0a0a12 0%, #12121f 50%, #1a1a2e 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 100;
+}
+
+/* Cinematic letterbox bars */
+.cinematicTop,
+.cinematicBottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 8vh;
+  background: #000;
+  z-index: 10;
+  transition: height 1s ease;
+}
+
+.cinematicTop {
+  top: 0;
+}
+
+.cinematicBottom {
+  bottom: 0;
+}
+
+.container[data-phase="ready"] .cinematicTop,
+.container[data-phase="ready"] .cinematicBottom {
+  height: 4vh;
+}
+
+/* Intro text (fade in phase) */
+.introText {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  transition: opacity 1s ease;
+}
+
+.introTextHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.introLine {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 40px rgba(147, 112, 219, 0.8);
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { text-shadow: 0 0 40px rgba(147, 112, 219, 0.6); }
+  50% { text-shadow: 0 0 60px rgba(147, 112, 219, 1), 0 0 100px rgba(147, 112, 219, 0.5); }
+}
+
+/* Main content area */
+.content {
+  display: flex;
+  gap: 3rem;
+  max-width: 1200px;
+  width: 90%;
+  padding: 2rem;
+  z-index: 5;
+}
+
+@media (max-width: 900px) {
+  .content {
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+}
+
+/* Hidden state for transitions */
+.hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+
+/* Portrait section */
+.portraitSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+  transition: opacity 1s ease, transform 1s ease;
+}
+
+.portraitFrame {
+  position: relative;
+  width: clamp(180px, 25vw, 280px);
+  height: clamp(220px, 30vw, 340px);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 3px solid rgba(147, 112, 219, 0.6);
+  box-shadow:
+    0 0 30px rgba(147, 112, 219, 0.4),
+    inset 0 0 60px rgba(0, 0, 0, 0.5);
+}
+
+.portrait {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: fadeInScale 1s ease forwards;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.portraitPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(147, 112, 219, 0.2) 0%, rgba(30, 30, 50, 0.9) 100%);
+}
+
+.portraitIcon {
+  font-size: 5rem;
+  filter: drop-shadow(0 0 20px rgba(147, 112, 219, 0.8));
+}
+
+.portraitGlow {
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(circle at center, rgba(147, 112, 219, 0.3) 0%, transparent 60%);
+  animation: rotateGlow 10s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotateGlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.characterName {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(147, 112, 219, 0.6);
+  margin: 0;
+  text-align: center;
+  animation: slideUp 0.8s ease forwards;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.characterTitle {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  animation: slideUp 0.8s ease 0.2s forwards;
+  opacity: 0;
+}
+
+.levelBadge {
+  background: linear-gradient(135deg, var(--mood-primary, #9370db), var(--mood-secondary, #7c5cbf));
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Story section */
+.storySection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 600px;
+  transition: opacity 1s ease 0.5s, transform 1s ease 0.5s;
+}
+
+.backstoryCard,
+.traitsCard,
+.statsCard,
+.scenarioCard {
+  background: rgba(20, 20, 35, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(147, 112, 219, 0.2);
+  border-radius: 12px;
+  padding: 1.25rem;
+  animation: cardFadeIn 0.6s ease forwards;
+  opacity: 0;
+}
+
+.backstoryCard { animation-delay: 0s; }
+.traitsCard { animation-delay: 0.15s; }
+.statsCard { animation-delay: 0.3s; }
+.scenarioCard { animation-delay: 0.45s; }
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.sectionTitle {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 0.75rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.titleIcon {
+  font-size: 1.2rem;
+}
+
+.cardTitle {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 0.75rem 0;
+  font-weight: 600;
+}
+
+.backstory {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+  font-style: italic;
+}
+
+.cursor {
+  color: var(--mood-primary, #9370db);
+  animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Traits */
+.traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.trait {
+  background: rgba(147, 112, 219, 0.15);
+  border: 1px solid rgba(147, 112, 219, 0.3);
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Stats grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .statsGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.statValue {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.statMod {
+  font-size: 0.75rem;
+  color: var(--mood-primary, #9370db);
+}
+
+/* Scenario */
+.scenarioTitle {
+  font-size: 1rem;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+}
+
+.scenarioDesc {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+/* Scene preview (background) */
+.scenePreview {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 2s ease;
+}
+
+.scenePreviewVisible {
+  opacity: 0.3;
+}
+
+.sceneImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(8px);
+}
+
+.sceneGradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 10, 18, 0.9) 0%, rgba(10, 10, 18, 0.7) 50%, rgba(10, 10, 18, 0.95) 100%);
+}
+
+/* Action section */
+.actionSection {
+  position: absolute;
+  bottom: 12vh;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  z-index: 10;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.beginButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, var(--mood-primary, #9370db), var(--mood-secondary, #7c5cbf));
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 20px rgba(147, 112, 219, 0.4);
+}
+
+.beginButton:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 30px rgba(147, 112, 219, 0.6);
+}
+
+.beginButton:active {
+  transform: scale(0.98);
+}
+
+.beginIcon {
+  font-size: 1.3rem;
+}
+
+.beginGlow {
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0;
+  animation: fadeInOut 2s ease-in-out infinite;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* Skip button */
+.skipButton {
+  position: absolute;
+  bottom: 12vh;
+  right: 2rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s ease;
+}
+
+.skipButton:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+  .content {
+    padding: 1rem;
+    gap: 1.5rem;
+  }
+
+  .portraitFrame {
+    width: 150px;
+    height: 180px;
+  }
+
+  .characterName {
+    font-size: 1.5rem;
+  }
+
+  .backstoryCard,
+  .traitsCard,
+  .statsCard,
+  .scenarioCard {
+    padding: 1rem;
+  }
+
+  .backstory {
+    font-size: 0.9rem;
+  }
+
+  .actionSection {
+    bottom: 10vh;
+  }
+
+  .beginButton {
+    padding: 0.85rem 2rem;
+    font-size: 1.1rem;
+  }
+
+  .skipButton {
+    bottom: 10vh;
+    right: 1rem;
+  }
+}

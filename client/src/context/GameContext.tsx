@@ -27,6 +27,7 @@ export type AppView =
   | "character_select"
   | "character_create"
   | "scenario_select"
+  | "game_intro"
   | "game"
   | "inventory"
   | "settings";
@@ -55,7 +56,7 @@ export type GameAction =
   | { type: "SET_CHARACTERS"; characters: Character[] }
   | { type: "SELECT_CHARACTER"; character: Character }
   | { type: "SET_SCENARIOS"; scenarios: ScenarioTemplate[] }
-  | { type: "START_SESSION"; session: GameSession; turn: GameTurn }
+  | { type: "START_SESSION"; session: GameSession; turn: GameTurn; character?: Character }
   | { type: "ADD_TURN"; turn: GameTurn }
   | { type: "UPDATE_SESSION"; session: GameSession }
   | { type: "UPDATE_CHARACTER"; character: Character }
@@ -111,7 +112,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         session: action.session,
         turns: [action.turn],
         mood: action.turn.mood,
-        view: "game",
+        selectedCharacter: action.character ?? state.selectedCharacter,
+        view: "game_intro",
       };
     case "ADD_TURN":
       return {

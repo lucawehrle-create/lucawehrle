@@ -129,8 +129,8 @@ export async function getScenarios(): Promise<ApiResponse<ScenarioTemplate[]>> {
 
 export async function createSession(
   data: CreateSessionRequest
-): Promise<ApiResponse<{ session: GameSession; turn: GameTurn }>> {
-  return request<{ session: GameSession; turn: GameTurn }>("/game/sessions", {
+): Promise<ApiResponse<{ session: GameSession; turn: GameTurn; character?: Character }>> {
+  return request<{ session: GameSession; turn: GameTurn; character?: Character }>("/game/sessions", {
     method: "POST",
     body: JSON.stringify(data),
   });

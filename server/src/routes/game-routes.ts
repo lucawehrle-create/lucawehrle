@@ -149,30 +149,61 @@ export function createGameRoutes(
       store.createSession(session);
       store.addTurn(firstTurn);
 
-      // Generate opening scene image synchronously (first turn always gets an image)
-      if (firstTurn.imagePrompt) {
-        try {
-          const imageResult = await aiService.generateImage({
-            prompt: firstTurn.imagePrompt,
-            characterAppearance: buildCharacterAppearance(character),
-            mood: firstTurn.mood,
-            style: "fantasy_painting",
-            modelTier: "standard",
-          });
-          if (imageResult.imageUrl) {
-            firstTurn.imageUrl = imageResult.imageUrl;
-            console.log(`[GameRoutes] Opening scene image generated for session ${session.id}`);
-          } else {
-            console.warn(`[GameRoutes] Opening scene image returned empty for session ${session.id}`);
-          }
-        } catch (err) {
-          console.error("[GameRoutes] Opening scene image generation failed:", err instanceof Error ? err.message : err);
-        }
+      // Generate character portrait if not already present (parallel with scene image)
+      const imagePromises: Promise<void>[] = [];
+
+      if (!character.portraitUrl) {
+        imagePromises.push(
+          aiService
+            .generatePortrait(
+              buildCharacterAppearance(character),
+              character.race,
+              character.characterClass,
+            )
+            .then((portraitUrl) => {
+              if (portraitUrl) {
+                character.portraitUrl = portraitUrl;
+                store.updateCharacter(character);
+                console.log(`[GameRoutes] Character portrait generated for ${character.name}`);
+              }
+            })
+            .catch((err) => {
+              console.error("[GameRoutes] Portrait generation failed:", err instanceof Error ? err.message : err);
+            }),
+        );
       }
 
-      const response: ApiResponse<{ session: GameSession; turn: GameTurn }> = {
+      // Generate opening scene image (first turn always gets an image)
+      if (firstTurn.imagePrompt) {
+        imagePromises.push(
+          aiService
+            .generateImage({
+              prompt: firstTurn.imagePrompt,
+              characterAppearance: buildCharacterAppearance(character),
+              mood: firstTurn.mood,
+              style: "fantasy_painting",
+              modelTier: "standard",
+            })
+            .then((imageResult) => {
+              if (imageResult.imageUrl) {
+                firstTurn.imageUrl = imageResult.imageUrl;
+                console.log(`[GameRoutes] Opening scene image generated for session ${session.id}`);
+              } else {
+                console.warn(`[GameRoutes] Opening scene image returned empty for session ${session.id}`);
+              }
+            })
+            .catch((err) => {
+              console.error("[GameRoutes] Opening scene image generation failed:", err instanceof Error ? err.message : err);
+            }),
+        );
+      }
+
+      // Wait for all image generation to complete
+      await Promise.all(imagePromises);
+
+      const response: ApiResponse<{ session: GameSession; turn: GameTurn; character: Character }> = {
         success: true,
-        data: { session, turn: firstTurn },
+        data: { session, turn: firstTurn, character },
       };
       res.status(201).json(response);
     } catch (error) {

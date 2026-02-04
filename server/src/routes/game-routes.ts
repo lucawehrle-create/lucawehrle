@@ -352,37 +352,9 @@ export function createGameRoutes(
       // Only generate a new scene image when the AI indicates a visual scene change
       const hasNewScene = result.turn.imagePrompt && result.turn.imagePrompt.trim().length > 0;
 
-      if (hasNewScene) {
-        try {
-          const imageResult = await aiService.generateImage({
-            prompt: result.turn.imagePrompt!,
-            characterAppearance: buildCharacterAppearance(character),
-            mood: result.turn.mood,
-            style: "fantasy_painting",
-            modelTier: "standard",
-          });
-          if (imageResult.imageUrl) {
-            result.turn.imageUrl = imageResult.imageUrl;
-            console.log(`[GameRoutes] Scene image generated for turn ${result.turn.id}`);
-          } else {
-            // Fall back to previous image if generation returned empty
-            if (previousTurn.imageUrl) {
-              result.turn.imageUrl = previousTurn.imageUrl;
-            }
-            console.warn(`[GameRoutes] Scene image returned empty for turn ${result.turn.id}`);
-          }
-        } catch (err) {
-          // Fall back to previous image on error
-          if (previousTurn.imageUrl) {
-            result.turn.imageUrl = previousTurn.imageUrl;
-          }
-          console.error("[GameRoutes] Scene image generation failed:", err instanceof Error ? err.message : err);
-        }
-      } else {
-        // Reuse previous turn's scene image (same location/scene)
-        if (previousTurn.imageUrl) {
-          result.turn.imageUrl = previousTurn.imageUrl;
-        }
+      if (!hasNewScene && previousTurn.imageUrl) {
+        // Reuse previous turn's scene image immediately (same location/scene)
+        result.turn.imageUrl = previousTurn.imageUrl;
       }
 
       // Enrich combat events with generated enemy stats
@@ -410,9 +382,7 @@ export function createGameRoutes(
         });
       }
 
-      // Process inventory events from AI — collect items to add and generate images
-      const itemsToAdd: { item: Item; visualDesc: string }[] = [];
-
+      // Add items to store IMMEDIATELY (without images) so response includes them
       for (const event of result.events) {
         if (event.type === "item_acquired") {
           const p = event.payload as Record<string, unknown>;
@@ -439,7 +409,22 @@ export function createGameRoutes(
             acquiredTurnId: result.turn.id,
           };
 
-          itemsToAdd.push({ item: newItem, visualDesc: String(p.visualDescription ?? "") });
+          store.addItem(character.id, newItem);
+
+          // Generate item image in background (fire-and-forget)
+          const visualDesc = String(p.visualDescription ?? "");
+          if (visualDesc) {
+            aiService.generateItemImage(visualDesc, newItem.name)
+              .then((imageUrl) => {
+                if (imageUrl) {
+                  newItem.imageUrl = imageUrl;
+                  console.log(`[GameRoutes] Item image generated for ${newItem.name}`);
+                }
+              })
+              .catch((err) => {
+                console.error("[GameRoutes] Item image generation failed:", err instanceof Error ? err.message : err);
+              });
+          }
         } else if (event.type === "item_lost") {
           const p = event.payload as Record<string, unknown>;
           const itemName = String(p.name ?? "");
@@ -447,25 +432,6 @@ export function createGameRoutes(
             store.removeItemByName(character.id, itemName);
           }
         }
-      }
-
-      // Generate item images in parallel (wait for all to complete before response)
-      if (itemsToAdd.length > 0) {
-        await Promise.all(
-          itemsToAdd.map(async ({ item, visualDesc }) => {
-            if (visualDesc) {
-              try {
-                const imageUrl = await aiService.generateItemImage(visualDesc, item.name);
-                if (imageUrl) {
-                  item.imageUrl = imageUrl;
-                }
-              } catch (err) {
-                console.error("[GameRoutes] Item image generation failed:", err instanceof Error ? err.message : err);
-              }
-            }
-            store.addItem(character.id, item);
-          }),
-        );
       }
 
       // Award XP and check for level-up
@@ -498,6 +464,33 @@ export function createGameRoutes(
         data: { turn: result.turn, events: result.events, inventory: updatedInventory, character, xpGained },
       };
       res.json(response);
+
+      // Generate scene image in background AFTER response is sent (fire-and-forget)
+      // The client polls /turns/:turnId/image to pick it up when ready
+      if (hasNewScene) {
+        aiService.generateImage({
+          prompt: result.turn.imagePrompt!,
+          characterAppearance: buildCharacterAppearance(character),
+          mood: result.turn.mood,
+          style: "fantasy_painting",
+          modelTier: "standard",
+        })
+          .then((imageResult) => {
+            if (imageResult.imageUrl) {
+              result.turn.imageUrl = imageResult.imageUrl;
+              console.log(`[GameRoutes] Scene image generated for turn ${result.turn.id}`);
+            } else if (previousTurn.imageUrl) {
+              result.turn.imageUrl = previousTurn.imageUrl;
+              console.warn(`[GameRoutes] Scene image returned empty for turn ${result.turn.id}, using previous`);
+            }
+          })
+          .catch((err) => {
+            if (previousTurn.imageUrl) {
+              result.turn.imageUrl = previousTurn.imageUrl;
+            }
+            console.error("[GameRoutes] Scene image generation failed:", err instanceof Error ? err.message : err);
+          });
+      }
     } catch (error) {
       res.status(500).json({
         success: false,

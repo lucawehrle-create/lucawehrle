@@ -22,7 +22,7 @@ export interface EnergyCheckResult {
 /**
  * Energy/monetization service implementing the Freemium model.
  *
- * Free tier: 10 actions/day, each generation costs energy.
+ * Free tier: 30 actions/day, each generation costs energy.
  * Premium: Unlimited actions, access to better AI models.
  * Creator: Unlimited + scenario creation tools.
  */
@@ -53,7 +53,7 @@ const COSTS: EnergyCosts = {
 
 /** Free daily actions per tier */
 const FREE_ACTIONS: Record<SubscriptionTier, number> = {
-  free: 10,
+  free: 30,
   premium: Infinity,
   creator: Infinity,
 };

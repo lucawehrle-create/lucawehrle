@@ -13,7 +13,7 @@ function createTestUser(overrides: Partial<User> = {}): User {
       max: 50,
       lastRechargeAt: new Date().toISOString(),
       dailyActionsUsed: 0,
-      dailyActionsMax: 10,
+      dailyActionsMax: 30,
     },
     createdAt: new Date().toISOString(),
     lastActiveAt: new Date().toISOString(),
@@ -51,8 +51,8 @@ describe("FreemiumEnergyService", () => {
           current: 0,
           max: 50,
           lastRechargeAt: new Date().toISOString(),
-          dailyActionsUsed: 10,
-          dailyActionsMax: 10,
+          dailyActionsUsed: 30,
+          dailyActionsMax: 30,
         },
       });
       const result = service.checkEnergy(user, "textGeneration");
@@ -66,8 +66,8 @@ describe("FreemiumEnergyService", () => {
           current: 20,
           max: 50,
           lastRechargeAt: new Date().toISOString(),
-          dailyActionsUsed: 10,
-          dailyActionsMax: 10,
+          dailyActionsUsed: 30,
+          dailyActionsMax: 30,
         },
       });
       const result = service.checkEnergy(user, "textGeneration");
@@ -81,8 +81,8 @@ describe("FreemiumEnergyService", () => {
           current: 1,
           max: 50,
           lastRechargeAt: new Date().toISOString(),
-          dailyActionsUsed: 10,
-          dailyActionsMax: 10,
+          dailyActionsUsed: 30,
+          dailyActionsMax: 30,
         },
       });
       // Object scan costs 3 energy
@@ -105,8 +105,8 @@ describe("FreemiumEnergyService", () => {
           current: 20,
           max: 50,
           lastRechargeAt: new Date().toISOString(),
-          dailyActionsUsed: 10,
-          dailyActionsMax: 10,
+          dailyActionsUsed: 30,
+          dailyActionsMax: 30,
         },
       });
       const updated = service.consumeEnergy(user, "textGeneration");
@@ -125,8 +125,8 @@ describe("FreemiumEnergyService", () => {
           current: 0,
           max: 50,
           lastRechargeAt: new Date().toISOString(),
-          dailyActionsUsed: 10,
-          dailyActionsMax: 10,
+          dailyActionsUsed: 30,
+          dailyActionsMax: 30,
         },
       });
       expect(() => service.consumeEnergy(user, "textGeneration")).toThrow();
@@ -141,7 +141,7 @@ describe("FreemiumEnergyService", () => {
           max: 50,
           lastRechargeAt: new Date().toISOString(),
           dailyActionsUsed: 8,
-          dailyActionsMax: 10,
+          dailyActionsMax: 30,
         },
       });
       const updated = service.rechargeDailyEnergy(user);

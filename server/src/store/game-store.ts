@@ -42,7 +42,7 @@ export class GameStore {
         max: 50,
         lastRechargeAt: new Date().toISOString(),
         dailyActionsUsed: 0,
-        dailyActionsMax: 10,
+        dailyActionsMax: 30,
       },
       createdAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),

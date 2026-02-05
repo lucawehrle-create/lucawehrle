@@ -1,10 +1,44 @@
+/* ================================================================
+   CombatHUD – D&D-style combat display
+   ================================================================ */
+
 .combatHud {
-  background: linear-gradient(180deg, rgba(220, 53, 69, 0.08) 0%, var(--color-surface-alt) 100%);
-  border: 1px solid rgba(220, 53, 69, 0.3);
-  border-radius: var(--radius-md);
-  padding: var(--space-sm) var(--space-md);
-  margin-bottom: var(--space-sm);
+  background: linear-gradient(180deg, rgba(220, 53, 69, 0.06) 0%, rgba(15, 15, 25, 0.9) 100%);
+  border: 1px solid rgba(220, 53, 69, 0.25);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+  position: relative;
+  overflow: hidden;
   animation: combatSlideIn 0.4s ease-out;
+}
+
+/* Subtle animated border glow during active combat */
+.combatHud::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 13px;
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(220, 53, 69, 0.2) 50%,
+    transparent 70%
+  );
+  background-size: 300% 300%;
+  animation: combatGlow 4s ease-in-out infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.combatHudDefeated::before {
+  animation: none;
+  background: none;
+}
+
+@keyframes combatGlow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
 @keyframes combatSlideIn {
@@ -12,49 +46,100 @@
   100% { opacity: 1; transform: translateY(0); }
 }
 
+/* ---- Combat header ---- */
+
+.combatHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+  position: relative;
+  z-index: 1;
+}
+
+.combatHeaderLine {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(220, 53, 69, 0.3), transparent);
+}
+
 .combatTitle {
-  text-align: center;
   font-family: var(--font-heading);
   font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 3px;
   color: #dc3545;
-  margin-bottom: var(--space-xs);
+  white-space: nowrap;
   animation: combatPulse 2s ease-in-out infinite;
 }
 
 @keyframes combatPulse {
   0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; text-shadow: 0 0 6px rgba(220, 53, 69, 0.4); }
+  50% { opacity: 1; text-shadow: 0 0 8px rgba(220, 53, 69, 0.4); }
 }
+
+/* ---- Combatants row ---- */
 
 .combatants {
   display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+  align-items: stretch;
+  gap: 0.6rem;
+  position: relative;
+  z-index: 1;
 }
 
 .combatant {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .enemy {
-  align-items: flex-start;
+  border-color: rgba(220, 53, 69, 0.12);
 }
 
 .player {
-  align-items: flex-end;
-  text-align: right;
+  border-color: rgba(81, 207, 102, 0.12);
 }
+
+/* ---- Combatant header (label + AC badge) ---- */
+
+.combatantHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.combatantLabel {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 600;
+}
+
+.acBadge {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- Combatant name ---- */
 
 .combatantName {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -69,50 +154,91 @@
   color: #51cf66;
 }
 
-.hpBarOuter {
-  width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 3px;
-  overflow: hidden;
-}
+/* ---- HP section (bar + text) ---- */
 
-.hpBarEnemy {
-  height: 100%;
-  background: linear-gradient(90deg, #dc3545, #ff6b6b);
-  border-radius: 3px;
-  transition: width 0.6s ease;
-}
-
-.hpBarPlayer {
-  height: 100%;
-  background: linear-gradient(90deg, #37b24d, #51cf66);
-  border-radius: 3px;
-  transition: width 0.6s ease;
-  margin-left: auto;
-}
-
-.stats {
+.hpSection {
   display: flex;
-  justify-content: space-between;
-  font-size: 0.6rem;
-  color: var(--color-text-muted);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hpBarOuter {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Subtle tick marks on HP bar */
+.hpBarOuter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 19px,
+    rgba(0, 0, 0, 0.2) 19px,
+    rgba(0, 0, 0, 0.2) 20px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hpBarFill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease, background 0.6s ease;
+  position: relative;
+}
+
+/* Animated shine on HP bar */
+.hpBarFill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15), transparent);
+  border-radius: 4px 4px 0 0;
+}
+
+.hpText {
+  font-size: 0.65rem;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 55px;
+  text-align: right;
+  transition: color 0.6s ease;
+}
+
+/* ---- VS divider ---- */
+
+.vsDivider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0 2px;
 }
 
 .vsIcon {
   font-family: var(--font-heading);
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-size: 0.75rem;
+  font-weight: 800;
   color: #ffd43b;
-  flex-shrink: 0;
-  text-shadow: 0 0 8px rgba(255, 212, 59, 0.3);
-  padding: 0 2px;
+  text-shadow: 0 0 10px rgba(255, 212, 59, 0.3);
+  letter-spacing: 1px;
 }
 
-/* Defeated state */
-.defeated .hpBarEnemy {
-  background: #555;
+/* ---- Defeated state ---- */
+
+.defeated {
+  opacity: 0.7;
 }
 
 .defeated .combatantName {
@@ -120,12 +246,42 @@
   text-decoration: line-through;
 }
 
-/* Damage flash effect */
-.damageFlash {
-  animation: flashRed 0.3s ease;
+.defeatedBanner {
+  margin-top: 4px;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #ffd43b;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  padding: 3px 0;
+  border-top: 1px solid rgba(255, 212, 59, 0.2);
+  animation: defeatedPulse 1.5s ease-in-out infinite;
 }
 
-@keyframes flashRed {
-  0% { background-color: rgba(220, 53, 69, 0.15); }
-  100% { background-color: transparent; }
+@keyframes defeatedPulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; text-shadow: 0 0 8px rgba(255, 212, 59, 0.4); }
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 480px) {
+  .combatHud {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .combatants {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .vsDivider {
+    padding: 0;
+  }
+
+  .vsIcon {
+    font-size: 0.6rem;
+  }
 }

@@ -97,6 +97,48 @@ const initialState: GameState = {
   error: null,
 };
 
+/* ------------------------------------------------------------------ */
+/*  Session persistence via localStorage                               */
+/* ------------------------------------------------------------------ */
+
+const SESSION_KEY = "aetheria_session";
+
+interface PersistedSession {
+  user: User;
+  session: GameSession;
+  turns: GameTurn[];
+  selectedCharacter: Character;
+  combatState: CombatantInfo | null;
+  mood: SceneMood;
+  journeyNarrative: string | null;
+}
+
+function initState(initial: GameState): GameState {
+  try {
+    const userId = localStorage.getItem("aetheria_user_id");
+    const saved = localStorage.getItem(SESSION_KEY);
+    if (userId && saved) {
+      const data = JSON.parse(saved) as PersistedSession;
+      if (data.session && data.turns?.length > 0 && data.selectedCharacter && data.user) {
+        return {
+          ...initial,
+          user: data.user,
+          session: data.session,
+          turns: data.turns,
+          selectedCharacter: data.selectedCharacter,
+          combatState: data.combatState ?? null,
+          mood: data.mood ?? "exploration",
+          journeyNarrative: data.journeyNarrative ?? null,
+          view: "game",
+        };
+      }
+    }
+  } catch {
+    localStorage.removeItem(SESSION_KEY);
+  }
+  return initial;
+}
+
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "SET_VIEW":
@@ -230,6 +272,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case "SET_ERROR":
       return { ...state, error: action.error, isLoading: false };
     case "LEAVE_GAME":
+      localStorage.removeItem(SESSION_KEY);
       return {
         ...state,
         session: null,
@@ -243,6 +286,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         error: null,
       };
     case "LOGOUT":
+      localStorage.removeItem(SESSION_KEY);
       localStorage.removeItem("aetheria_user_id");
       return { ...initialState };
     default:
@@ -258,12 +302,28 @@ interface GameContextValue {
 const GameContext = createContext<GameContextValue | null>(null);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(gameReducer, initialState);
+  const [state, dispatch] = useReducer(gameReducer, initialState, initState);
 
   // Apply mood to body for CSS theming
   useEffect(() => {
     document.body.setAttribute("data-mood", state.mood);
   }, [state.mood]);
+
+  // Persist active session to localStorage
+  useEffect(() => {
+    if (state.session && state.selectedCharacter && state.user && state.view === "game") {
+      const data: PersistedSession = {
+        user: state.user,
+        session: state.session,
+        turns: state.turns,
+        selectedCharacter: state.selectedCharacter,
+        combatState: state.combatState,
+        mood: state.mood,
+        journeyNarrative: state.journeyNarrative,
+      };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+    }
+  }, [state.session, state.turns, state.selectedCharacter, state.user, state.combatState, state.mood, state.journeyNarrative, state.view]);
 
   return (
     <GameContext.Provider value={{ state, dispatch }}>

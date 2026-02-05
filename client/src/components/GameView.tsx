@@ -132,7 +132,7 @@ export function GameView() {
       text: option.text,
     });
 
-    if (result.success && result.data) {
+    if (result.success && result.data?.turn?.narrative) {
       dispatch({ type: "ADD_TURN", turn: result.data.turn });
       dispatch({
         type: "PROCESS_EVENTS",
@@ -143,7 +143,10 @@ export function GameView() {
         diceRolls: result.data.turn.diceRolls,
       });
     } else {
-      dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Action failed" });
+      // Handle both explicit errors and invalid/empty responses
+      const errorMsg = result.error?.message
+        ?? (result.success ? "Die Antwort des Servers war unvollstaendig. Bitte versuche es erneut." : "Aktion fehlgeschlagen");
+      dispatch({ type: "SET_ERROR", error: errorMsg });
     }
     setIsProcessing(false);
     lastSubmitRef.current = null;
@@ -166,7 +169,7 @@ export function GameView() {
       text,
     });
 
-    if (result.success && result.data) {
+    if (result.success && result.data?.turn?.narrative) {
       dispatch({ type: "ADD_TURN", turn: result.data.turn });
       dispatch({
         type: "PROCESS_EVENTS",
@@ -177,7 +180,9 @@ export function GameView() {
         diceRolls: result.data.turn.diceRolls,
       });
     } else {
-      dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Action failed" });
+      const errorMsg = result.error?.message
+        ?? (result.success ? "Die Antwort des Servers war unvollstaendig. Bitte versuche es erneut." : "Aktion fehlgeschlagen");
+      dispatch({ type: "SET_ERROR", error: errorMsg });
     }
     setIsProcessing(false);
     lastSubmitRef.current = null;

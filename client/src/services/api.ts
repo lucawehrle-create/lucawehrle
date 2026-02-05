@@ -42,7 +42,7 @@ async function request<T>(
       const response = await fetch(`${API_BASE}${path}`, {
         ...options,
         headers,
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(30_000),
       });
       return (await response.json()) as ApiResponse<T>;
     } catch (error) {

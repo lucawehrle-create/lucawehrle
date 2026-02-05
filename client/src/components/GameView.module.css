@@ -467,6 +467,16 @@
   gap: var(--space-xs);
 }
 
+/* Empty state when no turns available */
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
 /* ============================================
    ACTION PANEL (bottom)
    ============================================ */

@@ -47,7 +47,9 @@ export function GameView() {
   // Guard against duplicate submissions (e.g. rapid double-click before state update)
   const lastSubmitRef = useRef<string | null>(null);
 
-  const currentTurn = state.turns[state.turns.length - 1];
+  // Defensive: ensure turns is an array and get the last valid turn
+  const turns = Array.isArray(state.turns) ? state.turns : [];
+  const currentTurn = turns.length > 0 ? turns[turns.length - 1] : null;
 
   // --- Persistent scene image ---
   // Track the currently displayed scene image and cross-fade on change
@@ -73,7 +75,7 @@ export function GameView() {
 
   useEffect(() => {
     narrativeEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [state.turns.length]);
+  }, [turns.length]);
 
   // Auto-dismiss notifications with type-based timing
   useEffect(() => {
@@ -262,19 +264,25 @@ export function GameView() {
               />
             )}
 
-            {state.turns.map((turn, index) => (
-              <React.Fragment key={turn.id}>
-                {index > 0 && (
-                  <div className={styles.turnDivider}>
-                    <span className={styles.dividerOrnament}>{"\u2726"}</span>
-                  </div>
-                )}
-                <TurnDisplay
-                  turn={turn}
-                  isLatest={index === state.turns.length - 1}
-                />
-              </React.Fragment>
-            ))}
+            {turns.length === 0 ? (
+              <div className={styles.emptyState}>
+                <p>Lade Abenteuer...</p>
+              </div>
+            ) : (
+              turns.map((turn, index) => (
+                <React.Fragment key={turn.id}>
+                  {index > 0 && (
+                    <div className={styles.turnDivider}>
+                      <span className={styles.dividerOrnament}>{"\u2726"}</span>
+                    </div>
+                  )}
+                  <TurnDisplay
+                    turn={turn}
+                    isLatest={index === turns.length - 1}
+                  />
+                </React.Fragment>
+              ))
+            )}
             <div ref={narrativeEndRef} />
           </div>
 
@@ -516,10 +524,18 @@ function TurnDisplay({
   turn: GameTurn;
   isLatest: boolean;
 }) {
+  // Defensive: ensure narrative exists
+  const narrative = turn.narrative ?? "";
   const paragraphs = useMemo(
-    () => turn.narrative.split(/\n\n+/).filter(Boolean),
-    [turn.narrative],
+    () => narrative.split(/\n\n+/).filter(Boolean),
+    [narrative],
   );
+  const diceRolls = Array.isArray(turn.diceRolls) ? turn.diceRolls : [];
+
+  // Don't render if turn has no content
+  if (!narrative && !turn.playerAction) {
+    return null;
+  }
 
   return (
     <div className={`${styles.turn} ${isLatest ? styles.latestTurn : ""}`}>
@@ -531,22 +547,24 @@ function TurnDisplay({
       )}
 
       {/* Dice rolls */}
-      {turn.diceRolls.length > 0 && (
+      {diceRolls.length > 0 && (
         <div className={styles.diceRolls}>
-          {turn.diceRolls.map((roll) => (
+          {diceRolls.map((roll) => (
             <DiceRollDisplay key={roll.id} roll={roll} />
           ))}
         </div>
       )}
 
       {/* Narrative text */}
-      <div className={styles.narrative}>
-        {isLatest ? (
-          <Typewriter text={turn.narrative} speed={16} />
-        ) : (
-          paragraphs.map((p, i) => <p key={i} className={styles.paragraph}>{p}</p>)
-        )}
-      </div>
+      {narrative && (
+        <div className={styles.narrative}>
+          {isLatest ? (
+            <Typewriter text={narrative} speed={16} />
+          ) : (
+            paragraphs.map((p, i) => <p key={i} className={styles.paragraph}>{p}</p>)
+          )}
+        </div>
+      )}
     </div>
   );
 }

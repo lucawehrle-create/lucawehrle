@@ -1,5 +1,6 @@
 import React from "react";
 import { GameProvider, useGame } from "./context/GameContext.js";
+import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import { LandingPage } from "./components/LandingPage.js";
 import { LoginScreen } from "./components/LoginScreen.js";
 import { CharacterSelect } from "./components/CharacterSelect.js";
@@ -38,8 +39,10 @@ function AppContent() {
 
 export function App() {
   return (
-    <GameProvider>
-      <AppContent />
-    </GameProvider>
+    <ErrorBoundary>
+      <GameProvider>
+        <AppContent />
+      </GameProvider>
+    </ErrorBoundary>
   );
 }

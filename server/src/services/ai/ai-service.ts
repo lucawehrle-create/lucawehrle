@@ -19,10 +19,10 @@ export interface AIService {
   generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse>;
 
   /** Generate a small item image from a visual description. Returns a data URI or null on failure. */
-  generateItemImage(visualDescription: string, itemName: string): Promise<string | null>;
+  generateItemImage(visualDescription: string, itemName: string, rarity?: string): Promise<string | null>;
 
   /** Generate a character portrait from appearance details. Returns image URL/data URI or null. */
-  generatePortrait(description: string, race: string, charClass: string): Promise<string | null>;
+  generatePortrait(description: string, race: string, charClass: string, traits?: string[], backstory?: string): Promise<string | null>;
 
   /** Analyze a scanned real-world object */
   analyzeObject(request: ObjectScanRequest): Promise<ObjectScanResponse>;
@@ -137,12 +137,12 @@ export class MockAIService implements AIService {
     };
   }
 
-  async generateItemImage(visualDescription: string, itemName: string): Promise<string | null> {
+  async generateItemImage(visualDescription: string, itemName: string, _rarity?: string): Promise<string | null> {
     // Return a placeholder item image
     return `https://placehold.co/128x128/1a1a2e/e0e0e0?text=${encodeURIComponent(itemName.slice(0, 12))}`;
   }
 
-  async generatePortrait(_description: string, _race: string, charClass: string): Promise<string | null> {
+  async generatePortrait(_description: string, _race: string, charClass: string, _traits?: string[], _backstory?: string): Promise<string | null> {
     return `https://placehold.co/256x256/1a1a2e/e0e0e0?text=${encodeURIComponent(charClass)}`;
   }
 

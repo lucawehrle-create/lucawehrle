@@ -53,6 +53,8 @@ export class DungeonMaster {
       characterId: character.id,
       title: scenario.title,
       scenario: scenario.id,
+      genre: scenario.genre,
+      setting: scenario.setting,
       currentChapter: 1,
       turnCount: 0,
       mood: "exploration",
@@ -64,6 +66,7 @@ export class DungeonMaster {
     // Build the opening context
     const characterSummary = this.buildCharacterSummary(character);
     const inventoryContext = this.buildInventoryContext(inventory);
+    const scenarioContext = this.buildScenarioContext(scenario);
 
     // Generate opening narrative
     const aiResponse = await this.aiService.generateText({
@@ -75,6 +78,7 @@ export class DungeonMaster {
       playerAction: `[GAME START] ${scenario.openingNarrative}`,
       mood: "exploration",
       modelTier: "standard",
+      scenarioContext,
     });
 
     // Safety check
@@ -191,6 +195,11 @@ export class DungeonMaster {
       ? `${action.text}\n${mechanicsContext}`
       : action.text;
 
+    // Build scenario context from session if available
+    const scenarioContext = session.genre && session.setting
+      ? `Genre: ${session.genre}\nSetting (KONSISTENT halten): ${session.setting}`
+      : undefined;
+
     // Generate narrative response
     const aiResponse = await this.aiService.generateText({
       sessionId: session.id,
@@ -201,6 +210,7 @@ export class DungeonMaster {
       playerAction: playerActionText,
       mood: session.mood,
       modelTier: "standard",
+      scenarioContext,
     });
 
     // Safety check
@@ -274,13 +284,60 @@ export class DungeonMaster {
   }
 
   private buildCharacterSummary(character: Character): string {
+    // Build a rich character summary that the AI can use to shape narrative tone
+    const abilityLine = `STR:${character.abilities.strength} DEX:${character.abilities.dexterity} CON:${character.abilities.constitution} INT:${character.abilities.intelligence} WIS:${character.abilities.wisdom} CHA:${character.abilities.charisma}`;
+
+    // Highlight primary stat for class flavor
+    const classStrengths: Record<string, string> = {
+      warrior: "Stark im Nahkampf, fuehrt Waffen meisterhaft",
+      mage: "Beherrscht arkane Kuenste, erkennt magische Phaenomene",
+      rogue: "Geschickt in Heimlichkeit, entdeckt verborgene Gefahren",
+      cleric: "Goettlich gesegnet, heilt und schuetzt",
+      ranger: "Meister der Wildnis, liest Spuren und Zeichen der Natur",
+      bard: "Charismatisch, gewinnt Herzen und entdeckt Geheimnisse durch Worte",
+      paladin: "Heiliger Krieger, spuert Boeses und verteidigt Unschuldige",
+    };
+    const classFlavor = classStrengths[character.characterClass] ?? "";
+
+    // Traits influence how the character perceives and reacts
+    const traitInfluence = character.traits.length > 0
+      ? `Persoenlichkeit (beeinflusst Wahrnehmung und Reaktionen): ${character.traits.join(", ")}`
+      : "";
+
+    // Backstory provides personal history to reference
+    const backstoryContext = character.backstory
+      ? `Hintergrundgeschichte (referenziere wenn passend): ${character.backstory}`
+      : "";
+
     return [
       `Name: ${character.name}`,
-      `Race: ${character.race}, Class: ${character.characterClass} (Level ${character.level})`,
+      `Rasse: ${character.race}, Klasse: ${character.characterClass} (Level ${character.level})`,
+      classFlavor && `Klassentalent: ${classFlavor}`,
       `HP: ${character.hitPoints}/${character.maxHitPoints}, AC: ${character.armorClass}`,
-      `STR:${character.abilities.strength} DEX:${character.abilities.dexterity} CON:${character.abilities.constitution} INT:${character.abilities.intelligence} WIS:${character.abilities.wisdom} CHA:${character.abilities.charisma}`,
-      `Appearance: ${character.appearance.clothing}, ${character.appearance.hairColor} hair, ${character.appearance.eyeColor} eyes`,
-      `Traits: ${character.traits.join(", ")}`,
+      abilityLine,
+      `Aussehen: ${character.appearance.hairColor} ${character.appearance.hairStyle} Haar, ${character.appearance.eyeColor} Augen, ${character.appearance.skinTone} Haut, ${character.appearance.height}, ${character.appearance.build}, traegt ${character.appearance.clothing}`,
+      traitInfluence,
+      backstoryContext,
+    ].filter(Boolean).join("\n");
+  }
+
+  /** Build scenario context string for narrative consistency. */
+  private buildScenarioContext(scenario: ScenarioTemplate): string {
+    // Genre guidance + setting reference for the AI to maintain consistency
+    const genreDescriptions: Record<string, string> = {
+      fantasy: "Klassische Fantasy — episch, heroisch, magisch, wunderbar",
+      horror: "Horror — beklemmend, unheimlich, langsam aufbauende Spannung, Andeutungen statt Enthuellung",
+      scifi: "Science-Fiction — fremd, technologisch, dimensionsuebergreifend, ehrfuerchterregend",
+      mystery: "Mysterium — raetselhaft, vielschichtig, jedes Detail ist ein Hinweis",
+      comedy: "Komoedie — humorvoll, absurde Situationen, selbstironisch, trotzdem funktionale Handlung",
+    };
+    const genreDesc = genreDescriptions[scenario.genre] ?? "Fantasy";
+
+    return [
+      `Titel: "${scenario.title}"`,
+      `Genre: ${scenario.genre} — ${genreDesc}`,
+      `Setting (KONSISTENT halten in imagePrompt): ${scenario.setting}`,
+      `Tags: ${scenario.tags.join(", ")}`,
     ].join("\n");
   }
 

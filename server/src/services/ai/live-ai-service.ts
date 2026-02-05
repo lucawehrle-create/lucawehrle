@@ -99,17 +99,32 @@ export class LiveAIService implements AIService {
     };
   }
 
-  async generateItemImage(visualDescription: string, itemName: string): Promise<string | null> {
+  async generateItemImage(
+    visualDescription: string,
+    itemName: string,
+    rarity?: string,
+  ): Promise<string | null> {
     if (!this.imageEnabled) return null;
 
     try {
-      const prompt = `RPG fantasy game item icon: "${itemName}". ${visualDescription}. Dark background, centered, detailed fantasy art, no text.`;
+      // Rarity affects visual quality and magical effects
+      const rarityEffects: Record<string, string> = {
+        common: "plain, well-worn, functional design",
+        uncommon: "well-crafted, polished, subtle decorative details",
+        rare: "magical glow, ethereal shimmer, intricate engravings",
+        epic: "radiant magical aura, glowing runes, ornate golden trim",
+        legendary: "divine radiance, otherworldly presence, elaborate mythical craftsmanship",
+        artifact: "reality-bending effects, god-forged, cosmic energy emanating",
+      };
+      const rarityHint = rarityEffects[rarity ?? "common"] ?? rarityEffects.common;
+
+      const prompt = `RPG fantasy game item on solid dark background (#1a1a2e): "${itemName}". ${visualDescription}. Quality: ${rarityHint}. Centered composition, detailed fantasy digital art, no text or labels, subtle lighting from item's inherent properties.`;
       const response = await this.openai.images.generate({
         model: "dall-e-3",
         prompt: prompt.slice(0, 4000),
         n: 1,
         size: "1024x1024",
-        quality: "standard",
+        quality: rarity === "legendary" || rarity === "artifact" || rarity === "epic" ? "hd" : "standard",
       });
       return response.data?.[0]?.url ?? null;
     } catch (error) {
@@ -118,17 +133,47 @@ export class LiveAIService implements AIService {
     }
   }
 
-  async generatePortrait(description: string, race: string, charClass: string): Promise<string | null> {
+  async generatePortrait(
+    description: string,
+    race: string,
+    charClass: string,
+    traits?: string[],
+    backstory?: string,
+  ): Promise<string | null> {
     if (!this.imageEnabled) return null;
 
     try {
-      const prompt = `Fantasy RPG character portrait: ${race} ${charClass}. ${description}. Dark background, dramatic lighting, shoulders-up, detailed digital art, no text.`;
+      // Class-specific visual hints
+      const classVisuals: Record<string, string> = {
+        warrior: "battle-hardened, confident stance, strong jaw",
+        mage: "wise eyes, mystical presence, arcane symbols reflected",
+        rogue: "sharp cunning gaze, half-smile, shadows in background",
+        cleric: "serene expression, holy light, compassionate eyes",
+        ranger: "alert watchful eyes, weathered skin, nature in background",
+        bard: "charismatic smile, expressive features, musical charm",
+        paladin: "noble bearing, righteous determination, inner light",
+      };
+      const classHint = classVisuals[charClass] ?? "";
+
+      // Personality traits influence expression
+      const traitExpression = traits?.length
+        ? `facial expression reflecting personality: ${traits.slice(0, 2).join(" and ")}`
+        : "";
+
+      // Backstory can hint at visible history
+      const backstoryHint = backstory?.includes("Krieg") || backstory?.includes("Kampf")
+        ? "bearing battle scars of past conflicts"
+        : backstory?.includes("Akademie") || backstory?.includes("Studium")
+        ? "scholarly refinement in bearing"
+        : "";
+
+      const prompt = `Fantasy RPG character portrait: ${race} ${charClass}. ${description}. ${classHint}. ${traitExpression}. ${backstoryHint}. Dark moody background with subtle atmosphere, cinematic lighting from above-left, shoulders-up framing, detailed fantasy digital painting style, painterly brushstrokes, no text or UI elements.`;
       const response = await this.openai.images.generate({
         model: "dall-e-3",
         prompt: prompt.slice(0, 4000),
         n: 1,
         size: "1024x1024",
-        quality: "standard",
+        quality: "hd",
       });
       return response.data?.[0]?.url ?? null;
     } catch (error) {

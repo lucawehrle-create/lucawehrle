@@ -11,6 +11,8 @@ export interface TextGenerationRequest {
   playerAction: string;
   mood: string;
   modelTier: AIModelTier;
+  /** Scenario genre + setting context for narrative tone and consistency */
+  scenarioContext?: string;
 }
 
 /** Response from text generation */

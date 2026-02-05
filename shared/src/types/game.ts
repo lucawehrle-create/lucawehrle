@@ -66,6 +66,10 @@ export interface GameSession {
   characterId: string;
   title: string;
   scenario: string;
+  /** Scenario genre for narrative tone consistency */
+  genre?: "fantasy" | "horror" | "scifi" | "mystery" | "comedy";
+  /** Scenario setting description for image/narrative consistency */
+  setting?: string;
   currentChapter: number;
   turnCount: number;
   mood: SceneMood;

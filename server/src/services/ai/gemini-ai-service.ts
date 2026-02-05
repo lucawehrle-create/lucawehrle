@@ -152,15 +152,30 @@ export class GeminiAIService implements AIService {
     );
   }
 
-  async generateItemImage(visualDescription: string, itemName: string): Promise<string | null> {
+  async generateItemImage(
+    visualDescription: string,
+    itemName: string,
+    rarity?: string,
+  ): Promise<string | null> {
     try {
+      // Rarity affects visual quality and magical effects
+      const rarityEffects: Record<string, string> = {
+        common: "plain, well-worn, functional design",
+        uncommon: "well-crafted, polished, subtle decorative details",
+        rare: "magical glow, ethereal shimmer, intricate engravings",
+        epic: "radiant magical aura, glowing runes, ornate golden trim",
+        legendary: "divine radiance, otherworldly presence, elaborate mythical craftsmanship",
+        artifact: "reality-bending effects, god-forged, cosmic energy emanating",
+      };
+      const rarityHint = rarityEffects[rarity ?? "common"] ?? rarityEffects.common;
+
       return await withRetry(
         async () => {
           const model = this.genAI.getGenerativeModel({
             model: GEMINI_IMAGE_MODEL,
           });
 
-          const prompt = `Generate a single RPG fantasy game item icon on a solid dark background (#1a1a2e). The item: "${itemName}". Visual details: ${visualDescription}. Style: detailed fantasy RPG item icon, painterly digital art style, glowing magical effects where appropriate, no text or labels, centered composition, 128x128 icon.`;
+          const prompt = `Generate a single RPG fantasy game item icon on a solid dark background (#1a1a2e). The item: "${itemName}". Visual details: ${visualDescription}. Quality: ${rarityHint}. Style: detailed fantasy RPG item icon, painterly digital art style, glowing magical effects where appropriate, no text or labels, centered composition.`;
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const result = await model.generateContent({
@@ -184,15 +199,45 @@ export class GeminiAIService implements AIService {
     }
   }
 
-  async generatePortrait(description: string, race: string, charClass: string): Promise<string | null> {
+  async generatePortrait(
+    description: string,
+    race: string,
+    charClass: string,
+    traits?: string[],
+    backstory?: string,
+  ): Promise<string | null> {
     try {
+      // Class-specific visual hints
+      const classVisuals: Record<string, string> = {
+        warrior: "battle-hardened, confident stance, strong jaw",
+        mage: "wise eyes, mystical presence, arcane symbols reflected",
+        rogue: "sharp cunning gaze, half-smile, shadows in background",
+        cleric: "serene expression, holy light, compassionate eyes",
+        ranger: "alert watchful eyes, weathered skin, nature in background",
+        bard: "charismatic smile, expressive features, musical charm",
+        paladin: "noble bearing, righteous determination, inner light",
+      };
+      const classHint = classVisuals[charClass] ?? "";
+
+      // Personality traits influence expression
+      const traitExpression = traits?.length
+        ? `facial expression reflecting personality: ${traits.slice(0, 2).join(" and ")}`
+        : "";
+
+      // Backstory can hint at visible history
+      const backstoryHint = backstory?.includes("Krieg") || backstory?.includes("Kampf")
+        ? "bearing battle scars of past conflicts"
+        : backstory?.includes("Akademie") || backstory?.includes("Studium")
+        ? "scholarly refinement in bearing"
+        : "";
+
       return await withRetry(
         async () => {
           const model = this.genAI.getGenerativeModel({
             model: GEMINI_IMAGE_MODEL,
           });
 
-          const prompt = `Generate a fantasy RPG character portrait. Race: ${race}. Class: ${charClass}. Appearance: ${description}. Style: detailed fantasy portrait painting, dramatic lighting, dark moody background, shoulders-up framing, no text or labels, high quality digital art.`;
+          const prompt = `Generate a fantasy RPG character portrait. Race: ${race}. Class: ${charClass}. Appearance: ${description}. ${classHint}. ${traitExpression}. ${backstoryHint}. Style: detailed fantasy portrait painting, cinematic lighting from above-left, dark moody background with subtle atmosphere, shoulders-up framing, painterly brushstrokes, no text or labels.`;
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const result = await model.generateContent({

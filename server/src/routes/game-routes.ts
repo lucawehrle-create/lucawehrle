@@ -22,7 +22,7 @@ import type {
   ItemEffect,
 } from "@aetheria/shared";
 import { LEVEL_THRESHOLDS } from "@aetheria/shared";
-import { buildCharacterAppearance } from "../services/ai/prompts.js";
+import { buildCharacterAppearance, genreToImageStyle } from "../services/ai/prompts.js";
 
 /**
  * Calculate XP reward for a turn based on events and dice rolls.
@@ -182,12 +182,15 @@ export function createGameRoutes(
       // --- Fire-and-forget: generate images in background AFTER response is sent ---
 
       // Generate character portrait if not already present
+      // Pass traits and backstory for personality-infused portrait
       if (!character.portraitUrl) {
         aiService
           .generatePortrait(
-            buildCharacterAppearance(character),
+            buildCharacterAppearance({ ...character, traits: character.traits }),
             character.race,
             character.characterClass,
+            character.traits,
+            character.backstory,
           )
           .then((portraitUrl) => {
             if (portraitUrl) {
@@ -207,12 +210,15 @@ export function createGameRoutes(
         || `${scenario.setting || scenario.description}. Fantasy RPG scene, dramatic lighting, cinematic composition, atmospheric ${firstTurn.mood} mood.`;
       firstTurn.imagePrompt = openingImagePrompt; // Ensure imagePrompt is set for polling logic
 
+      // Use genre-appropriate art style for visual consistency
+      const imageStyle = genreToImageStyle(scenario.genre);
+
       aiService
         .generateImage({
           prompt: openingImagePrompt,
-          characterAppearance: buildCharacterAppearance(character),
+          characterAppearance: buildCharacterAppearance({ ...character, traits: character.traits }),
           mood: firstTurn.mood,
-          style: "fantasy_painting",
+          style: imageStyle,
           modelTier: "standard",
         })
         .then((imageResult) => {
@@ -407,9 +413,10 @@ export function createGameRoutes(
           store.addItem(character.id, newItem);
 
           // Generate item image in background (fire-and-forget)
+          // Pass rarity for quality-based visual effects
           const visualDesc = String(p.visualDescription ?? "");
           if (visualDesc) {
-            aiService.generateItemImage(visualDesc, newItem.name)
+            aiService.generateItemImage(visualDesc, newItem.name, newItem.rarity)
               .then((imageUrl) => {
                 if (imageUrl) {
                   newItem.imageUrl = imageUrl;
@@ -463,11 +470,14 @@ export function createGameRoutes(
       // Generate scene image in background AFTER response is sent (fire-and-forget)
       // The client polls /turns/:turnId/image to pick it up when ready
       if (hasNewScene) {
+        // Use genre-appropriate art style for visual consistency
+        const sceneImageStyle = genreToImageStyle(session.genre);
+
         aiService.generateImage({
           prompt: result.turn.imagePrompt!,
-          characterAppearance: buildCharacterAppearance(character),
+          characterAppearance: buildCharacterAppearance({ ...character, traits: character.traits }),
           mood: result.turn.mood,
-          style: "fantasy_painting",
+          style: sceneImageStyle,
           modelTier: "standard",
         })
           .then((imageResult) => {

@@ -130,7 +130,7 @@ export function ScenarioSelect() {
         key={i}
         className={i < count ? styles.starFilled : styles.starEmpty}
       >
-        \u2605
+        {"\u2605"}
       </span>
     ));
   }
@@ -162,10 +162,10 @@ export function ScenarioSelect() {
             className={styles.backBtn}
             onClick={() => dispatch({ type: "SET_VIEW", view: "character_select" })}
           >
-            \u2190
+            {"\u2190"}
           </button>
           <div className={styles.logo}>
-            <span className={styles.logoIcon}>\u2728</span>
+            <span className={styles.logoIcon}>{"\u2728"}</span>
             <span className={styles.logoText}>Aetheria AI</span>
           </div>
         </div>
@@ -176,7 +176,7 @@ export function ScenarioSelect() {
             onClick={() => dispatch({ type: "SET_VIEW", view: "settings" })}
             title="Einstellungen"
           >
-            \u2699
+            {"\u2699"}
           </button>
         </div>
       </nav>
@@ -185,7 +185,7 @@ export function ScenarioSelect() {
       <section className={styles.hero}>
         <div className={styles.heroContent}>
           <div className={styles.heroBadge}>
-            <span>\uD83C\uDFAF</span> Abenteuer auswaehlen
+            <span>{"\uD83C\uDFAF"}</span> Abenteuer auswaehlen
           </div>
           <h1 className={styles.heroTitle}>
             Wohin fuehrt dein
@@ -218,15 +218,15 @@ export function ScenarioSelect() {
                 </p>
                 <div className={styles.characterStats}>
                   <div className={styles.miniStat}>
-                    <span className={styles.miniStatIcon}>\u2764\uFE0F</span>
+                    <span className={styles.miniStatIcon}>{"\u2764\uFE0F"}</span>
                     <span>{character.hitPoints}/{character.maxHitPoints}</span>
                   </div>
                   <div className={styles.miniStat}>
-                    <span className={styles.miniStatIcon}>\uD83D\uDEE1\uFE0F</span>
+                    <span className={styles.miniStatIcon}>{"\uD83D\uDEE1\uFE0F"}</span>
                     <span>RK {character.armorClass}</span>
                   </div>
                   <div className={styles.miniStat}>
-                    <span className={styles.miniStatIcon}>\u2B50</span>
+                    <span className={styles.miniStatIcon}>{"\u2B50"}</span>
                     <span>{character.experience} XP</span>
                   </div>
                 </div>
@@ -240,7 +240,7 @@ export function ScenarioSelect() {
       {featured && (
         <section className={styles.featuredSection}>
           <div className={styles.sectionInner}>
-            <div className={styles.featuredBadge}>\uD83C\uDF1F Empfohlenes Abenteuer</div>
+            <div className={styles.featuredBadge}>{"\uD83C\uDF1F"} Empfohlenes Abenteuer</div>
             <button
               className={styles.featuredCard}
               onClick={() => handleSelectScenario(featured)}
@@ -275,7 +275,7 @@ export function ScenarioSelect() {
                 </div>
               </div>
               <div className={styles.featuredAction}>
-                <span className={styles.playIcon}>\u25B6</span>
+                <span className={styles.playIcon}>{"\u25B6"}</span>
               </div>
             </button>
           </div>
@@ -291,7 +291,7 @@ export function ScenarioSelect() {
               className={`${styles.genreTab} ${genreFilter === "all" ? styles.genreTabActive : ""}`}
               onClick={() => setGenreFilter("all")}
             >
-              <span className={styles.genreTabIcon}>\uD83C\uDF0D</span>
+              <span className={styles.genreTabIcon}>{"\uD83C\uDF0D"}</span>
               <span className={styles.genreTabLabel}>Alle</span>
               <span className={styles.genreTabCount}>{state.scenarios.length}</span>
             </button>
@@ -325,7 +325,7 @@ export function ScenarioSelect() {
             </div>
 
             <div className={styles.searchBox}>
-              <span className={styles.searchIcon}>\uD83D\uDD0D</span>
+              <span className={styles.searchIcon}>{"\uD83D\uDD0D"}</span>
               <input
                 type="text"
                 placeholder="Abenteuer suchen..."
@@ -335,7 +335,7 @@ export function ScenarioSelect() {
               />
               {searchQuery && (
                 <button className={styles.searchClear} onClick={() => setSearchQuery("")}>
-                  \u2715
+                  {"\u2715"}
                 </button>
               )}
             </div>
@@ -351,7 +351,7 @@ export function ScenarioSelect() {
             </select>
 
             <button className={styles.randomBtn} onClick={handleRandomScenario} title="Zufaelliges Abenteuer">
-              <span>\uD83C\uDFB2</span> Zufaellig
+              <span>{"\uD83C\uDFB2"}</span> Zufaellig
             </button>
           </div>
         </div>
@@ -362,7 +362,7 @@ export function ScenarioSelect() {
         <div className={styles.sectionInner}>
           {filteredScenarios.length === 0 ? (
             <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>\uD83D\uDD2E</div>
+              <div className={styles.emptyIcon}>{"\uD83D\uDD2E"}</div>
               <h3 className={styles.emptyTitle}>Keine Abenteuer gefunden</h3>
               <p className={styles.emptyText}>
                 Versuche andere Filter oder eine andere Suche.
@@ -419,7 +419,7 @@ export function ScenarioSelect() {
 
                     {/* Setting preview */}
                     <div className={styles.cardSetting}>
-                      <span className={styles.settingIcon}>\uD83C\uDFAD</span>
+                      <span className={styles.settingIcon}>{"\uD83C\uDFAD"}</span>
                       <span className={styles.settingText}>
                         {scenario.setting
                           ? scenario.setting.length > 100
@@ -439,7 +439,7 @@ export function ScenarioSelect() {
                     {/* Bottom action */}
                     <div className={styles.cardFooter}>
                       <span className={styles.cardPlay}>
-                        Abenteuer starten <span>\u2192</span>
+                        Abenteuer starten <span>{"\u2192"}</span>
                       </span>
                     </div>
                   </button>
@@ -455,28 +455,28 @@ export function ScenarioSelect() {
         <div className={styles.sectionInner}>
           <div className={styles.infoGrid}>
             <div className={styles.infoCard}>
-              <div className={styles.infoIcon}>\u267E\uFE0F</div>
+              <div className={styles.infoIcon}>{"\u267E\uFE0F"}</div>
               <h4 className={styles.infoTitle}>Unendliche Variationen</h4>
               <p className={styles.infoText}>
                 Jedes Abenteuer verlaeuft anders. Die KI erschafft einzigartige Geschichten basierend auf deinen Entscheidungen.
               </p>
             </div>
             <div className={styles.infoCard}>
-              <div className={styles.infoIcon}>\uD83C\uDFB2</div>
+              <div className={styles.infoIcon}>{"\uD83C\uDFB2"}</div>
               <h4 className={styles.infoTitle}>D&D 5e Regeln</h4>
               <p className={styles.infoText}>
                 Authentische Wuerfelwuerfe, Faehigkeitschecks und Kampfmechaniken in jedem Szenario.
               </p>
             </div>
             <div className={styles.infoCard}>
-              <div className={styles.infoIcon}>\uD83D\uDCAB</div>
+              <div className={styles.infoIcon}>{"\uD83D\uDCAB"}</div>
               <h4 className={styles.infoTitle}>KI-generierte Bilder</h4>
               <p className={styles.infoText}>
                 Jede Szene wird mit einzigartigen, KI-generierten Bildern zum Leben erweckt.
               </p>
             </div>
             <div className={styles.infoCard}>
-              <div className={styles.infoIcon}>\uD83D\uDCBE</div>
+              <div className={styles.infoIcon}>{"\uD83D\uDCBE"}</div>
               <h4 className={styles.infoTitle}>Auto-Speichern</h4>
               <p className={styles.infoText}>
                 Dein Fortschritt wird automatisch gespeichert. Setze jederzeit dort fort, wo du aufgehoert hast.
@@ -488,7 +488,7 @@ export function ScenarioSelect() {
 
       {/* Footer */}
       <footer className={styles.footer}>
-        <p>\u00A9 2024 Aetheria AI \u2014 Unendliche Abenteuer, angetrieben von KI.</p>
+        <p>{"\u00A9"} 2024 Aetheria AI {"\u2014"} Unendliche Abenteuer, angetrieben von KI.</p>
       </footer>
     </div>
   );

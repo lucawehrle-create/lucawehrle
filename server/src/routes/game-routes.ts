@@ -149,88 +149,83 @@ export function createGameRoutes(
       store.createSession(session);
       store.addTurn(firstTurn);
 
-      // Generate assets in parallel: portrait, scene image, and journey narrative
-      const generationPromises: Promise<void>[] = [];
-      let journeyNarrative = "";
+      // Generate journey narrative (text-only, fast) — await with timeout + fallback
+      const fallbackNarrative = `${character.name} hatte lange nach diesem Ort gesucht. "${scenario.title}" — nun stand das Abenteuer unmittelbar bevor.`;
+      let journeyNarrative = fallbackNarrative;
 
-      // Generate "how you got here" narrative
-      generationPromises.push(
-        aiService
-          .generateJourneyNarrative(
-            character.name,
-            character.backstory,
-            character.traits,
-            scenario.title,
-            scenario.setting ?? scenario.description,
-          )
-          .then((narrative) => {
-            journeyNarrative = narrative;
-            console.log(`[GameRoutes] Journey narrative generated for ${character.name}`);
-          })
-          .catch((err) => {
-            console.error("[GameRoutes] Journey narrative generation failed:", err instanceof Error ? err.message : err);
-            journeyNarrative = `${character.name} hatte lange nach diesem Ort gesucht. "${scenario.title}" — nun stand das Abenteuer unmittelbar bevor.`;
-          }),
-      );
-
-      // Generate character portrait if not already present
-      if (!character.portraitUrl) {
-        generationPromises.push(
-          aiService
-            .generatePortrait(
-              buildCharacterAppearance(character),
-              character.race,
-              character.characterClass,
-            )
-            .then((portraitUrl) => {
-              if (portraitUrl) {
-                character.portraitUrl = portraitUrl;
-                store.updateCharacter(character);
-                console.log(`[GameRoutes] Character portrait generated for ${character.name}`);
-              }
-            })
-            .catch((err) => {
-              console.error("[GameRoutes] Portrait generation failed:", err instanceof Error ? err.message : err);
-            }),
+      try {
+        const narrativePromise = aiService.generateJourneyNarrative(
+          character.name,
+          character.backstory,
+          character.traits,
+          scenario.title,
+          scenario.setting ?? scenario.description,
         );
+        // Timeout after 8 seconds — if text gen is slow, use fallback
+        const timeoutPromise = new Promise<string>((_, reject) =>
+          setTimeout(() => reject(new Error("Journey narrative timeout")), 8000),
+        );
+        journeyNarrative = await Promise.race([narrativePromise, timeoutPromise]);
+        console.log(`[GameRoutes] Journey narrative generated for ${character.name}`);
+      } catch (err) {
+        console.error("[GameRoutes] Journey narrative generation failed:", err instanceof Error ? err.message : err);
+        journeyNarrative = fallbackNarrative;
       }
 
-      // Generate opening scene image (first turn ALWAYS gets an image)
-      // Use AI's imagePrompt if provided, otherwise generate a fallback from scenario
-      const openingImagePrompt = firstTurn.imagePrompt
-        || `${scenario.setting || scenario.description}. Fantasy RPG scene, dramatic lighting, cinematic composition, atmospheric ${firstTurn.mood} mood.`;
-
-      generationPromises.push(
-        aiService
-          .generateImage({
-            prompt: openingImagePrompt,
-            characterAppearance: buildCharacterAppearance(character),
-            mood: firstTurn.mood,
-            style: "fantasy_painting",
-            modelTier: "standard",
-          })
-          .then((imageResult) => {
-            if (imageResult.imageUrl) {
-              firstTurn.imageUrl = imageResult.imageUrl;
-              firstTurn.imagePrompt = openingImagePrompt; // Ensure imagePrompt is set for polling logic
-              console.log(`[GameRoutes] Opening scene image generated for session ${session.id}`);
-            } else {
-              console.warn(`[GameRoutes] Opening scene image returned empty for session ${session.id}`);
-            }
-          })
-          .catch((err) => {
-            console.error("[GameRoutes] Opening scene image generation failed:", err instanceof Error ? err.message : err);
-          }),
-      );
-
-      // Wait for all generation to complete
-      await Promise.all(generationPromises);
-
+      // Send response IMMEDIATELY — no waiting for image generation
       const response: ApiResponse<{ session: GameSession; turn: GameTurn; character: Character; journeyNarrative: string }> = {
         success: true,
         data: { session, turn: firstTurn, character, journeyNarrative },
       };
       res.status(201).json(response);
+
+      // --- Fire-and-forget: generate images in background AFTER response is sent ---
+
+      // Generate character portrait if not already present
+      if (!character.portraitUrl) {
+        aiService
+          .generatePortrait(
+            buildCharacterAppearance(character),
+            character.race,
+            character.characterClass,
+          )
+          .then((portraitUrl) => {
+            if (portraitUrl) {
+              character.portraitUrl = portraitUrl;
+              store.updateCharacter(character);
+              console.log(`[GameRoutes] Character portrait generated for ${character.name}`);
+            }
+          })
+          .catch((err) => {
+            console.error("[GameRoutes] Portrait generation failed:", err instanceof Error ? err.message : err);
+          });
+      }
+
+      // Generate opening scene image (first turn ALWAYS gets an image)
+      // Client polls /turns/:turnId/image to pick it up when ready
+      const openingImagePrompt = firstTurn.imagePrompt
+        || `${scenario.setting || scenario.description}. Fantasy RPG scene, dramatic lighting, cinematic composition, atmospheric ${firstTurn.mood} mood.`;
+      firstTurn.imagePrompt = openingImagePrompt; // Ensure imagePrompt is set for polling logic
+
+      aiService
+        .generateImage({
+          prompt: openingImagePrompt,
+          characterAppearance: buildCharacterAppearance(character),
+          mood: firstTurn.mood,
+          style: "fantasy_painting",
+          modelTier: "standard",
+        })
+        .then((imageResult) => {
+          if (imageResult.imageUrl) {
+            firstTurn.imageUrl = imageResult.imageUrl;
+            console.log(`[GameRoutes] Opening scene image generated for session ${session.id}`);
+          } else {
+            console.warn(`[GameRoutes] Opening scene image returned empty for session ${session.id}`);
+          }
+        })
+        .catch((err) => {
+          console.error("[GameRoutes] Opening scene image generation failed:", err instanceof Error ? err.message : err);
+        });
     } catch (error) {
       res.status(500).json({
         success: false,

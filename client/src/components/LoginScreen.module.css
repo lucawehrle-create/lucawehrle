@@ -3,92 +3,155 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: radial-gradient(ellipse at center, var(--color-surface-alt) 0%, var(--color-bg) 70%);
+  background: linear-gradient(180deg, #0a0a12 0%, #12121f 50%, #1a1a2e 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.container::before,
+.container::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.container::before {
+  width: 500px;
+  height: 500px;
+  background: #9370db;
+  top: -200px;
+  right: -150px;
+  animation: float 20s ease-in-out infinite;
+}
+
+.container::after {
+  width: 400px;
+  height: 400px;
+  background: #51cf66;
+  bottom: -150px;
+  left: -100px;
+  animation: float 16s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(30px, -30px); }
 }
 
 .content {
   text-align: center;
   max-width: 440px;
-  padding: var(--space-2xl);
+  padding: 2.5rem;
+  position: relative;
+  z-index: 1;
 }
 
 .title {
-  font-family: var(--font-heading);
   font-size: 3.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--color-accent) 0%, #a78bfa 50%, #c084fc 100%);
+  font-weight: 800;
+  background: linear-gradient(135deg, #fff 0%, #9370db 60%, #51cf66 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin-bottom: var(--space-xs);
+  margin: 0 0 0.5rem 0;
   letter-spacing: 2px;
 }
 
 .subtitle {
-  font-family: var(--font-heading);
-  font-size: 1.1rem;
-  color: var(--color-text-muted);
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.5);
   letter-spacing: 4px;
   text-transform: uppercase;
-  margin-bottom: var(--space-lg);
+  margin: 0 0 1.5rem 0;
 }
 
 .tagline {
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.6);
   font-size: 0.95rem;
-  margin-bottom: var(--space-xl);
-  line-height: 1.6;
+  margin: 0 0 2.5rem 0;
+  line-height: 1.7;
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: 1rem;
+  background: rgba(20, 20, 35, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 2rem;
 }
 
 .input {
   width: 100%;
-  padding: var(--space-md);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-text);
+  padding: 0.9rem 1.2rem;
+  background: rgba(10, 10, 18, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: #fff;
   font-size: 1rem;
-  font-family: var(--font-body);
   outline: none;
-  transition: border-color var(--transition-fast);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
 }
 
 .input:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-glow);
+  border-color: rgba(147, 112, 219, 0.5);
+  box-shadow: 0 0 0 3px rgba(147, 112, 219, 0.1);
 }
 
 .input::placeholder {
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .enterButton {
   width: 100%;
-  padding: var(--space-md) var(--space-xl);
-  background: linear-gradient(135deg, var(--color-accent), #a78bfa);
-  color: white;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #9370db, #7c5cbf);
+  color: #fff;
   border: none;
-  border-radius: var(--radius-md);
-  font-size: 1.1rem;
+  border-radius: 12px;
+  font-size: 1.05rem;
   font-weight: 600;
-  font-family: var(--font-heading);
-  letter-spacing: 1px;
   cursor: pointer;
-  transition: all var(--transition-fast);
-  box-shadow: 0 4px 15px var(--color-accent-glow);
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 20px rgba(147, 112, 219, 0.3);
 }
 
 .enterButton:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px var(--color-accent-glow);
+  box-shadow: 0 8px 30px rgba(147, 112, 219, 0.4);
 }
 
 .enterButton:active {
   transform: translateY(0);
+}
+
+.error {
+  color: #ff6b6b;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 0.75rem;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.2);
+  border-radius: 10px;
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 1.5rem;
+  }
+
+  .title {
+    font-size: 2.5rem;
+  }
+
+  .form {
+    padding: 1.5rem;
+  }
 }

@@ -67,6 +67,8 @@ export function InventoryPanel({ onClose }: InventoryPanelProps) {
   const { state, dispatch } = useGame();
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("rarity");
+  const [discardingId, setDiscardingId] = useState<string | null>(null);
+  const [discardError, setDiscardError] = useState<string | null>(null);
 
   useEffect(() => {
     if (state.selectedCharacter && !state.inventory) {
@@ -79,11 +81,16 @@ export function InventoryPanel({ onClose }: InventoryPanelProps) {
   }, [state.selectedCharacter, state.inventory, dispatch]);
 
   const handleDiscard = async (itemId: string) => {
-    if (!state.selectedCharacter) return;
+    if (!state.selectedCharacter || discardingId) return;
+    setDiscardingId(itemId);
+    setDiscardError(null);
     const result = await discardItem(state.selectedCharacter.id, itemId);
     if (result.success && result.data) {
       dispatch({ type: "SET_INVENTORY", inventory: result.data });
+    } else {
+      setDiscardError(result.error?.message ?? "Gegenstand konnte nicht weggeworfen werden");
     }
+    setDiscardingId(null);
   };
 
   const inventory = state.inventory;
@@ -191,11 +198,22 @@ export function InventoryPanel({ onClose }: InventoryPanelProps) {
               </p>
             ) : (
               displayItems.map((item) => (
-                <ItemCard key={item.id} item={item} onDiscard={handleDiscard} />
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  onDiscard={handleDiscard}
+                  isDiscarding={discardingId === item.id}
+                />
               ))
             )}
           </div>
         </>
+      )}
+
+      {discardError && (
+        <div className={styles.discardError} onClick={() => setDiscardError(null)}>
+          {discardError}
+        </div>
       )}
 
       {!inventory && (
@@ -205,7 +223,7 @@ export function InventoryPanel({ onClose }: InventoryPanelProps) {
   );
 }
 
-function ItemCard({ item, onDiscard }: { item: Item; onDiscard: (id: string) => void }) {
+function ItemCard({ item, onDiscard, isDiscarding }: { item: Item; onDiscard: (id: string) => void; isDiscarding: boolean }) {
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const rarityColor = RARITY_COLORS[item.rarity];
@@ -264,7 +282,9 @@ function ItemCard({ item, onDiscard }: { item: Item; onDiscard: (id: string) => 
       {/* Discard action (only visible when expanded) */}
       {expanded && (
         <div className={styles.itemActions} onClick={(e) => e.stopPropagation()}>
-          {confirmDiscard ? (
+          {isDiscarding ? (
+            <span className={styles.discardingText}>Wird entfernt...</span>
+          ) : confirmDiscard ? (
             <div className={styles.confirmRow}>
               <span className={styles.confirmText}>Wegwerfen?</span>
               <button

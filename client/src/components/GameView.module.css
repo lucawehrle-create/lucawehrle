@@ -115,6 +115,19 @@
   font-size: 0.85rem;
 }
 
+/* Energy low warning (<=3 actions remaining) */
+.energyLow {
+  color: #ffd43b;
+  background: rgba(255, 212, 59, 0.12);
+  border: 1px solid rgba(255, 212, 59, 0.3);
+  animation: energyPulse 2s ease-in-out infinite;
+}
+
+@keyframes energyPulse {
+  0%, 100% { box-shadow: none; }
+  50% { box-shadow: 0 0 8px rgba(255, 212, 59, 0.3); }
+}
+
 .menuButton {
   background: none;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -503,16 +516,35 @@
   gap: 4px;
 }
 
-.optionButton:hover {
+.optionButton:hover:not(:disabled) {
   background: rgba(30, 30, 50, 0.8);
   border-color: rgba(255, 255, 255, 0.12);
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
-.optionButton:active {
+.optionButton:active:not(:disabled) {
   transform: translateY(0);
   box-shadow: none;
+}
+
+.optionButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Keyboard press flash */
+.optionPressed {
+  background: rgba(196, 163, 90, 0.15) !important;
+  border-color: rgba(196, 163, 90, 0.4) !important;
+  box-shadow: 0 0 12px rgba(196, 163, 90, 0.2) !important;
+  transition: none !important;
+}
+
+/* Options container disabled state */
+.optionsDisabled {
+  pointer-events: none;
 }
 
 /* Type-based accent colors */

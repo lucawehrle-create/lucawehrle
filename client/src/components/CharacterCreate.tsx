@@ -141,6 +141,7 @@ export function CharacterCreate() {
   const [race, setRace] = useState<string>("human");
   const [charClass, setCharClass] = useState<string>("warrior");
   const [backstory, setBackstory] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
 
   // Appearance state
   const [hairColor, setHairColor] = useState("brown");
@@ -171,8 +172,9 @@ export function CharacterCreate() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!state.user) return;
+    if (!state.user || isCreating) return;
 
+    setIsCreating(true);
     dispatch({ type: "SET_LOADING", isLoading: true });
 
     const data: CreateCharacterRequest = {
@@ -205,6 +207,7 @@ export function CharacterCreate() {
     } else {
       dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Charakter konnte nicht erstellt werden" });
     }
+    setIsCreating(false);
     dispatch({ type: "SET_LOADING", isLoading: false });
   }
 
@@ -450,8 +453,12 @@ export function CharacterCreate() {
         </div>
 
         <div className={styles.actions}>
-          <button type="submit" className={styles.createButton}>
-            Charakter erstellen
+          <button
+            type="submit"
+            className={`${styles.createButton} ${isCreating ? styles.createButtonLoading : ""}`}
+            disabled={isCreating}
+          >
+            {isCreating ? "Charakter wird erschaffen..." : "Charakter erstellen"}
           </button>
         </div>
       </form>

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import type { Character } from "@aetheria/shared";
 import { getXPProgress, getXPForNextLevel } from "@aetheria/shared";
 import { useGame } from "../context/GameContext.js";
@@ -15,12 +15,22 @@ const CLASS_ICONS: Record<string, string> = {
   paladin: "\uD83D\uDEE1\uFE0F",
 };
 
+const ABILITY_LABELS: Record<string, string> = {
+  strength: "STR",
+  dexterity: "GES",
+  constitution: "KON",
+  intelligence: "INT",
+  wisdom: "WEI",
+  charisma: "CHA",
+};
+
 interface CharacterStatusBarProps {
   character: Character;
 }
 
 export function CharacterStatusBar({ character }: CharacterStatusBarProps) {
   const { state } = useGame();
+  const [showStats, setShowStats] = useState(false);
 
   const { hpPercent, hpColor, icon, xpPercent, nextLevelXP, isMaxLevel } = useMemo(() => {
     const hp = Math.max(0, Math.min(100, (character.hitPoints / character.maxHitPoints) * 100));
@@ -46,38 +56,62 @@ export function CharacterStatusBar({ character }: CharacterStatusBarProps) {
   );
 
   return (
-    <div className={styles.bar}>
-      {portraitUrl ? (
-        <img src={portraitUrl} alt={character.name} className={styles.portrait} />
-      ) : (
-        <span className={styles.classIcon}>{icon}</span>
+    <div className={styles.barWrapper}>
+      <div
+        className={styles.bar}
+        onClick={() => setShowStats((prev) => !prev)}
+        title="Klicke fuer Attribute"
+      >
+        {portraitUrl ? (
+          <img src={portraitUrl} alt={character.name} className={styles.portrait} />
+        ) : (
+          <span className={styles.classIcon}>{icon}</span>
+        )}
+        <div className={styles.nameBlock}>
+          <span className={styles.name}>{character.name}</span>
+          <span className={styles.meta}>Lv.{character.level} {character.race} {character.characterClass}</span>
+          <div className={styles.xpBarOuter} title={isMaxLevel ? "Max Level" : `${character.experience} / ${nextLevelXP} XP`}>
+            <div
+              className={styles.xpBarInner}
+              style={{ width: `${isMaxLevel ? 100 : xpPercent}%` }}
+            />
+          </div>
+          <span className={styles.xpText}>
+            {isMaxLevel ? "MAX" : `${character.experience} / ${nextLevelXP} XP`}
+          </span>
+        </div>
+        <div className={styles.hpBlock}>
+          <div className={styles.hpBarOuter}>
+            <div
+              className={styles.hpBarInner}
+              style={{ width: `${hpPercent}%`, background: hpColor }}
+            />
+          </div>
+          <span className={styles.hpText}>{character.hitPoints}/{character.maxHitPoints}</span>
+        </div>
+        <div className={styles.stat}>
+          <span className={styles.statLabel}>AC</span>
+          <span className={styles.statValue}>{character.armorClass}</span>
+        </div>
+      </div>
+
+      {/* Expandable ability scores panel */}
+      {showStats && (
+        <div className={styles.statsPanel}>
+          {Object.entries(character.abilities).map(([key, value]) => {
+            const mod = Math.floor((value - 10) / 2);
+            return (
+              <div key={key} className={styles.abilityItem}>
+                <span className={styles.abilityLabel}>{ABILITY_LABELS[key] ?? key}</span>
+                <span className={styles.abilityValue}>{value}</span>
+                <span className={styles.abilityMod}>
+                  {mod >= 0 ? "+" : ""}{mod}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       )}
-      <div className={styles.nameBlock}>
-        <span className={styles.name}>{character.name}</span>
-        <span className={styles.meta}>Lv.{character.level} {character.race} {character.characterClass}</span>
-        <div className={styles.xpBarOuter} title={isMaxLevel ? "Max Level" : `${character.experience} / ${nextLevelXP} XP`}>
-          <div
-            className={styles.xpBarInner}
-            style={{ width: `${isMaxLevel ? 100 : xpPercent}%` }}
-          />
-        </div>
-        <span className={styles.xpText}>
-          {isMaxLevel ? "MAX" : `${character.experience} / ${nextLevelXP} XP`}
-        </span>
-      </div>
-      <div className={styles.hpBlock}>
-        <div className={styles.hpBarOuter}>
-          <div
-            className={styles.hpBarInner}
-            style={{ width: `${hpPercent}%`, background: hpColor }}
-          />
-        </div>
-        <span className={styles.hpText}>{character.hitPoints}/{character.maxHitPoints}</span>
-      </div>
-      <div className={styles.stat}>
-        <span className={styles.statLabel}>AC</span>
-        <span className={styles.statValue}>{character.armorClass}</span>
-      </div>
     </div>
   );
 }

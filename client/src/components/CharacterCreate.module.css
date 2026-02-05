@@ -350,9 +350,38 @@
   box-shadow: 0 4px 20px rgba(147, 112, 219, 0.3);
 }
 
-.createButton:hover {
+.createButton:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(147, 112, 219, 0.4);
+}
+
+.createButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.createButtonLoading {
+  position: relative;
+  overflow: hidden;
+}
+
+.createButtonLoading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    transparent 100%
+  );
+  animation: createShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes createShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 @media (max-width: 600px) {

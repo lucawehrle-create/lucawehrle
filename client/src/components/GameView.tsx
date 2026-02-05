@@ -41,6 +41,7 @@ export function GameView() {
   const [showInventory, setShowInventory] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [pressedOptionIdx, setPressedOptionIdx] = useState<number | null>(null);
   const narrativeEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   // Guard against duplicate submissions (e.g. rapid double-click before state update)
@@ -103,6 +104,9 @@ export function GameView() {
       const num = parseInt(e.key, 10);
       if (num >= 1 && num <= currentTurn.options.length) {
         e.preventDefault();
+        // Flash the pressed option button briefly
+        setPressedOptionIdx(num - 1);
+        setTimeout(() => setPressedOptionIdx(null), 200);
         handleOptionClick(currentTurn.options[num - 1]);
       }
     },
@@ -219,7 +223,10 @@ export function GameView() {
           >
             <span className={styles.btnIcon}>{"\u2699"}</span>
           </button>
-          <div className={styles.energyBadge}>
+          <div className={`${styles.energyBadge} ${
+            state.user?.energy && (state.user.energy.dailyActionsMax - state.user.energy.dailyActionsUsed) <= 3
+              ? styles.energyLow : ""
+          }`}>
             <span className={styles.energyIcon}>{"\u26A1"}</span>
             {state.user?.energy.dailyActionsMax !== undefined
               ? `${state.user.energy.dailyActionsUsed}/${state.user.energy.dailyActionsMax}`
@@ -281,13 +288,14 @@ export function GameView() {
         <div className={styles.moodBorder} />
 
         {/* Action options with keyboard shortcuts */}
-        {currentTurn && !isProcessing && currentTurn.options.length > 0 && (
-          <div className={styles.options}>
+        {currentTurn && currentTurn.options.length > 0 && (
+          <div className={`${styles.options} ${isProcessing ? styles.optionsDisabled : ""}`}>
             {currentTurn.options.map((option, index) => (
               <button
                 key={option.id}
-                className={`${styles.optionButton} ${styles[`optionType_${option.type}`] ?? ""}`}
+                className={`${styles.optionButton} ${styles[`optionType_${option.type}`] ?? ""} ${pressedOptionIdx === index ? styles.optionPressed : ""}`}
                 onClick={() => handleOptionClick(option)}
+                disabled={isProcessing}
               >
                 <div className={styles.optionHeader}>
                   <span className={styles.optionIcon}>

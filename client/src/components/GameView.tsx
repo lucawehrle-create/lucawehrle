@@ -128,30 +128,41 @@ export function GameView() {
     lastSubmitRef.current = submitKey;
     setIsProcessing(true);
 
-    const result = await submitAction(state.session.id, {
-      type: "option",
-      optionId: option.id,
-      text: option.text,
-    });
-
-    if (result.success && result.data?.turn?.narrative) {
-      dispatch({ type: "ADD_TURN", turn: result.data.turn });
-      dispatch({
-        type: "PROCESS_EVENTS",
-        events: result.data.events,
-        inventory: result.data.inventory,
-        character: result.data.character,
-        xpGained: result.data.xpGained,
-        diceRolls: result.data.turn.diceRolls,
+    try {
+      const result = await submitAction(state.session.id, {
+        type: "option",
+        optionId: option.id,
+        text: option.text,
       });
-    } else {
-      // Handle both explicit errors and invalid/empty responses
-      const errorMsg = result.error?.message
-        ?? (result.success ? "Die Antwort des Servers war unvollstaendig. Bitte versuche es erneut." : "Aktion fehlgeschlagen");
-      dispatch({ type: "SET_ERROR", error: errorMsg });
+
+      if (result.success && result.data?.turn?.narrative) {
+        dispatch({ type: "ADD_TURN", turn: result.data.turn });
+        dispatch({
+          type: "PROCESS_EVENTS",
+          events: result.data.events,
+          inventory: result.data.inventory,
+          character: result.data.character,
+          xpGained: result.data.xpGained,
+          diceRolls: result.data.turn.diceRolls,
+        });
+      } else {
+        // Handle explicit errors (including INSUFFICIENT_ENERGY) and invalid responses
+        let errorMsg = result.error?.message ?? "Aktion fehlgeschlagen";
+        if (result.error?.code === "INSUFFICIENT_ENERGY") {
+          errorMsg = "Energie aufgebraucht! Bitte warte bis morgen oder kaufe ein Energie-Paket.";
+        } else if (result.success) {
+          errorMsg = "Die Antwort des Servers war unvollstaendig. Bitte versuche es erneut.";
+        }
+        console.error("[GameView] Action failed:", result.error);
+        dispatch({ type: "SET_ERROR", error: errorMsg });
+      }
+    } catch (err) {
+      console.error("[GameView] Unexpected error:", err);
+      dispatch({ type: "SET_ERROR", error: "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut." });
+    } finally {
+      setIsProcessing(false);
+      lastSubmitRef.current = null;
     }
-    setIsProcessing(false);
-    lastSubmitRef.current = null;
   }
 
   async function handleFreeTextSubmit(e: React.FormEvent) {
@@ -166,28 +177,40 @@ export function GameView() {
     const text = freeText;
     setFreeText("");
 
-    const result = await submitAction(state.session.id, {
-      type: "freetext",
-      text,
-    });
-
-    if (result.success && result.data?.turn?.narrative) {
-      dispatch({ type: "ADD_TURN", turn: result.data.turn });
-      dispatch({
-        type: "PROCESS_EVENTS",
-        events: result.data.events,
-        inventory: result.data.inventory,
-        character: result.data.character,
-        xpGained: result.data.xpGained,
-        diceRolls: result.data.turn.diceRolls,
+    try {
+      const result = await submitAction(state.session.id, {
+        type: "freetext",
+        text,
       });
-    } else {
-      const errorMsg = result.error?.message
-        ?? (result.success ? "Die Antwort des Servers war unvollstaendig. Bitte versuche es erneut." : "Aktion fehlgeschlagen");
-      dispatch({ type: "SET_ERROR", error: errorMsg });
+
+      if (result.success && result.data?.turn?.narrative) {
+        dispatch({ type: "ADD_TURN", turn: result.data.turn });
+        dispatch({
+          type: "PROCESS_EVENTS",
+          events: result.data.events,
+          inventory: result.data.inventory,
+          character: result.data.character,
+          xpGained: result.data.xpGained,
+          diceRolls: result.data.turn.diceRolls,
+        });
+      } else {
+        // Handle explicit errors (including INSUFFICIENT_ENERGY) and invalid responses
+        let errorMsg = result.error?.message ?? "Aktion fehlgeschlagen";
+        if (result.error?.code === "INSUFFICIENT_ENERGY") {
+          errorMsg = "Energie aufgebraucht! Bitte warte bis morgen oder kaufe ein Energie-Paket.";
+        } else if (result.success) {
+          errorMsg = "Die Antwort des Servers war unvollstaendig. Bitte versuche es erneut.";
+        }
+        console.error("[GameView] Free text action failed:", result.error);
+        dispatch({ type: "SET_ERROR", error: errorMsg });
+      }
+    } catch (err) {
+      console.error("[GameView] Unexpected error in free text:", err);
+      dispatch({ type: "SET_ERROR", error: "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es erneut." });
+    } finally {
+      setIsProcessing(false);
+      lastSubmitRef.current = null;
     }
-    setIsProcessing(false);
-    lastSubmitRef.current = null;
   }
 
   return (

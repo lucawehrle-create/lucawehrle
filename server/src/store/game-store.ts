@@ -32,17 +32,19 @@ export class GameStore {
   }
 
   createUser(username: string, email: string): User {
+    // Default to premium tier for unlimited actions during development
+    // Change to "free" for production with monetization
     const user: User = {
       id: uuidv4(),
       username,
       email,
-      subscriptionTier: "free",
+      subscriptionTier: "premium",
       energy: {
         current: 0,
-        max: 50,
+        max: 500,
         lastRechargeAt: new Date().toISOString(),
         dailyActionsUsed: 0,
-        dailyActionsMax: 30,
+        dailyActionsMax: Number.MAX_SAFE_INTEGER,
       },
       createdAt: new Date().toISOString(),
       lastActiveAt: new Date().toISOString(),

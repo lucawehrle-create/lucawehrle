@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useGame } from "../context/GameContext.js";
 import type { GameNotification } from "../context/GameContext.js";
-import { submitAction, scanObject } from "../services/api.js";
+import { submitAction } from "../services/api.js";
 import { useSceneImage } from "../hooks/useImagePolling.js";
 import type { GameTurn, ActionOption } from "@aetheria/shared";
 import { DiceRollDisplay } from "./DiceRollDisplay.js";
@@ -179,25 +179,6 @@ export function GameView() {
     lastSubmitRef.current = null;
   }
 
-  async function handleScan() {
-    if (!state.session) return;
-    setIsProcessing(true);
-
-    const result = await scanObject(
-      state.session.id,
-      "placeholder-image-data",
-      "base64"
-    );
-
-    if (result.success && result.data) {
-      dispatch({ type: "SET_ERROR", error: null });
-      alert(`Gescannt: ${result.data.item.name}\n${result.data.item.description}`);
-    } else {
-      dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Scan fehlgeschlagen" });
-    }
-    setIsProcessing(false);
-  }
-
   return (
     <div className={styles.container}>
       {/* Atmospheric background particles */}
@@ -231,9 +212,6 @@ export function GameView() {
           >
             <span className={styles.btnIcon}>{"\uD83C\uDF92"}</span> Inventar
           </button>
-          <button className={styles.iconButton} onClick={handleScan} title="Objekt scannen (AR)">
-            <span className={styles.btnIcon}>{"\uD83D\uDCF7"}</span> Scan
-          </button>
           <button
             className={styles.iconButton}
             onClick={() => dispatch({ type: "SET_VIEW", view: "settings" })}
@@ -250,18 +228,19 @@ export function GameView() {
         </div>
       </header>
 
-      {/* Main content area */}
+      {/* Main content area – two-column layout */}
       <div className={styles.mainArea}>
-        {/* Persistent scene image panel */}
-        <SceneImagePanel
-          sceneImage={sceneImage}
-          prevSceneImage={prevSceneImage}
-          isLoading={expectsNewImage && sceneImageLoading && !polledImageUrl}
-        />
+        {/* Left: Scene image panel */}
+        <div className={styles.sceneColumn}>
+          <SceneImagePanel
+            sceneImage={sceneImage}
+            prevSceneImage={prevSceneImage}
+            isLoading={expectsNewImage && sceneImageLoading && !polledImageUrl}
+          />
+        </div>
 
-        {/* Content row: narrative + optional sidebar */}
-        <div className={styles.contentRow}>
-          {/* Narrative scroll */}
+        {/* Right: Narrative + optional sidebar */}
+        <div className={styles.narrativeColumn}>
           <div className={styles.narrativeScroll}>
             {/* Combat HUD */}
             {state.combatState && state.selectedCharacter && (
@@ -272,11 +251,17 @@ export function GameView() {
             )}
 
             {state.turns.map((turn, index) => (
-              <TurnDisplay
-                key={turn.id}
-                turn={turn}
-                isLatest={index === state.turns.length - 1}
-              />
+              <React.Fragment key={turn.id}>
+                {index > 0 && (
+                  <div className={styles.turnDivider}>
+                    <span className={styles.dividerOrnament}>{"\u2726"}</span>
+                  </div>
+                )}
+                <TurnDisplay
+                  turn={turn}
+                  isLatest={index === state.turns.length - 1}
+                />
+              </React.Fragment>
             ))}
             <div ref={narrativeEndRef} />
           </div>

@@ -29,9 +29,13 @@ async function request<T>(
   };
 
   // Include user ID if available
-  const userId = localStorage.getItem("aetheria_user_id");
-  if (userId) {
-    headers["x-user-id"] = userId;
+  try {
+    const userId = localStorage.getItem("aetheria_user_id");
+    if (userId) {
+      headers["x-user-id"] = userId;
+    }
+  } catch {
+    // Ignore localStorage errors (e.g., private browsing mode)
   }
 
   const maxAttempts = 3;
@@ -78,7 +82,11 @@ export async function registerUser(
     body: JSON.stringify({ username, email }),
   });
   if (result.success && result.data) {
-    localStorage.setItem("aetheria_user_id", result.data.id);
+    try {
+      localStorage.setItem("aetheria_user_id", result.data.id);
+    } catch {
+      // Ignore localStorage errors (quota exceeded, private browsing, etc.)
+    }
   }
   return result;
 }

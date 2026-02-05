@@ -134,7 +134,11 @@ function initState(initial: GameState): GameState {
       }
     }
   } catch {
-    localStorage.removeItem(SESSION_KEY);
+    try {
+      localStorage.removeItem(SESSION_KEY);
+    } catch {
+      // Ignore - localStorage may be completely unavailable
+    }
   }
   return initial;
 }
@@ -272,7 +276,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case "SET_ERROR":
       return { ...state, error: action.error, isLoading: false };
     case "LEAVE_GAME":
-      localStorage.removeItem(SESSION_KEY);
+      try {
+        localStorage.removeItem(SESSION_KEY);
+      } catch {
+        // Ignore localStorage errors
+      }
       return {
         ...state,
         session: null,
@@ -286,8 +294,12 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         error: null,
       };
     case "LOGOUT":
-      localStorage.removeItem(SESSION_KEY);
-      localStorage.removeItem("aetheria_user_id");
+      try {
+        localStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem("aetheria_user_id");
+      } catch {
+        // Ignore localStorage errors
+      }
       return { ...initialState };
     default:
       return state;
@@ -309,19 +321,45 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     document.body.setAttribute("data-mood", state.mood);
   }, [state.mood]);
 
-  // Persist active session to localStorage
+  // Persist active session to localStorage (with size limits to avoid quota errors)
   useEffect(() => {
     if (state.session && state.selectedCharacter && state.user && state.view === "game") {
+      // Only keep the last 5 turns to avoid localStorage quota issues
+      // Strip large fields (imageUrl, imagePrompt) from older turns to save space
+      const MAX_STORED_TURNS = 5;
+      const turnsToStore = state.turns.slice(-MAX_STORED_TURNS).map((turn, idx, arr) => {
+        // Keep full data only for the latest turn
+        if (idx === arr.length - 1) return turn;
+        // Strip large fields from older turns
+        return {
+          ...turn,
+          imageUrl: undefined,
+          imagePrompt: undefined,
+        };
+      });
+
       const data: PersistedSession = {
         user: state.user,
         session: state.session,
-        turns: state.turns,
+        turns: turnsToStore,
         selectedCharacter: state.selectedCharacter,
         combatState: state.combatState,
         mood: state.mood,
         journeyNarrative: state.journeyNarrative,
       };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+
+      try {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+      } catch (err) {
+        // localStorage quota exceeded - clear old session data and continue
+        // The game can still function without persistence
+        console.warn("[GameContext] localStorage quota exceeded, clearing session cache:", err);
+        try {
+          localStorage.removeItem(SESSION_KEY);
+        } catch {
+          // Ignore errors when clearing
+        }
+      }
     }
   }, [state.session, state.turns, state.selectedCharacter, state.user, state.combatState, state.mood, state.journeyNarrative, state.view]);
 

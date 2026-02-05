@@ -26,7 +26,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   handleRetry = () => {
     // Clear persisted session data that might be corrupted
-    localStorage.removeItem("aetheria_session");
+    try {
+      localStorage.removeItem("aetheria_session");
+      localStorage.removeItem("aetheria_user_id");
+    } catch {
+      // Ignore localStorage errors during cleanup
+    }
     this.setState({ hasError: false, error: null });
     window.location.reload();
   };

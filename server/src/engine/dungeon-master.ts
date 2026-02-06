@@ -135,7 +135,8 @@ export class DungeonMaster {
     character: Character,
     inventory: Inventory,
     action: PlayerAction,
-    previousTurn: GameTurn
+    previousTurn: GameTurn,
+    recentTurns: GameTurn[] = []
   ): Promise<{ turn: GameTurn; events: GameEvent[]; updatedSession: GameSession }> {
     const turnNumber = session.turnCount + 1;
     const diceRolls: DiceRoll[] = [];
@@ -187,9 +188,17 @@ export class DungeonMaster {
     // Build AI prompt context
     const characterSummary = this.buildCharacterSummary(character);
     const inventoryContext = this.buildInventoryContext(inventory);
-    const recentContext = contextSummary
-      ? `${contextSummary.overallSummary}\n\nRecent: ${contextSummary.recentEvents}`
-      : `Previous scene: ${previousTurn.narrative}`;
+
+    // Build explicit action history from recent turns to prevent repetition
+    const actionHistory = this.buildActionHistory(recentTurns);
+
+    // Combine context summary with action history
+    let recentContext: string;
+    if (contextSummary) {
+      recentContext = `${contextSummary.overallSummary}\n\n${actionHistory}\n\nAktuelle Szene: ${contextSummary.recentEvents}`;
+    } else {
+      recentContext = `${actionHistory}\n\nAktuelle Szene: ${previousTurn.narrative.slice(0, 500)}`;
+    }
 
     const playerActionText = mechanicsContext
       ? `${action.text}\n${mechanicsContext}`
@@ -347,6 +356,41 @@ export class DungeonMaster {
     }
     const items = inventory.items.map((i) => `- ${i.name} (${i.category}): ${i.description}`);
     return `Inventory (${inventory.items.length}/${inventory.maxSlots}):\n${items.join("\n")}\nGold: ${inventory.gold}`;
+  }
+
+  /**
+   * Build a compact action history from recent turns.
+   * This prevents the AI from suggesting the same options repeatedly.
+   */
+  private buildActionHistory(recentTurns: GameTurn[]): string {
+    if (recentTurns.length === 0) {
+      return "=== AKTIONSHISTORIE ===\nDies ist der erste Zug.";
+    }
+
+    // Get the last 8 turns with player actions (skip turns without player action)
+    const turnsWithActions = recentTurns
+      .filter((t) => t.playerAction?.text)
+      .slice(-8);
+
+    if (turnsWithActions.length === 0) {
+      return "=== AKTIONSHISTORIE ===\nDies ist der erste Zug.";
+    }
+
+    const actionLines = turnsWithActions.map((t, i) => {
+      const action = t.playerAction!.text;
+      // Add brief outcome hint from dice rolls if available
+      const outcome = t.diceRolls.length > 0
+        ? t.diceRolls.some((r) => r.success) ? " (Erfolg)" : " (Fehlschlag)"
+        : "";
+      return `${i + 1}. ${action}${outcome}`;
+    });
+
+    return `=== AKTIONSHISTORIE (KRITISCH - nicht wiederholen!) ===
+Der Spieler hat BEREITS folgende Aktionen ausgefuehrt:
+${actionLines.join("\n")}
+
+WICHTIG: Biete KEINE Optionen an, die der Spieler schon gemacht hat!
+Die naechsten Optionen muessen NEUE Moeglichkeiten bieten.`;
   }
 
   private calculateImportance(events: GameEvent[], diceRolls: DiceRoll[]): number {

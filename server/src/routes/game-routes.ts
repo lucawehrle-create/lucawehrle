@@ -322,11 +322,15 @@ export function createGameRoutes(
       }
 
       const inventory = store.getInventory(character.id)!;
-      const previousTurn = store.getLastTurn(session.id);
+      const allTurns = store.getTurns(session.id);
+      const previousTurn = allTurns[allTurns.length - 1];
       if (!previousTurn) {
         res.status(400).json({ success: false, error: { code: "NO_PREVIOUS_TURN", message: "No previous turn found" } });
         return;
       }
+
+      // Pass recent turns for action history context (last 10 turns)
+      const recentTurns = allTurns.slice(-10);
 
       const playerAction: PlayerAction = {
         type: body.action.type,
@@ -339,7 +343,8 @@ export function createGameRoutes(
         character,
         inventory,
         playerAction,
-        previousTurn
+        previousTurn,
+        recentTurns
       );
 
       // Consume energy

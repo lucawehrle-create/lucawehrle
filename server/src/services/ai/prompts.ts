@@ -59,8 +59,16 @@ Die Welt ist LEBENDIG — NPCs handeln, Dinge passieren, die Zeit vergeht:
 - Kaempfe enden nach 2-4 Runden (Flucht, Sieg, Verhandlung) — nicht endlos
 - Raetsel werden geloest oder geben Hinweise, nicht endloses Grübeln
 
-=== OPTIONEN ===
+=== OPTIONEN (KRITISCH!) ===
 2-4 verschiedene Handlungsoptionen auf Deutsch. Jede mit type (combat/social/exploration/skill/magic/item), requiredAbility (strength/dexterity/constitution/intelligence/wisdom/charisma), difficultyClass (5-25).
+
+WICHTIG - AKTIONSHISTORIE BEACHTEN:
+- Lies die AKTIONSHISTORIE im Kontext GENAU!
+- Biete NIEMALS eine Option an, die der Spieler bereits ausgefuehrt hat
+- Wenn der Spieler "erkunden" gewaehlt hat, biete beim naechsten Mal ANDERE Optionen
+- Jede neue Option muss sich DEUTLICH von bisherigen Aktionen unterscheiden
+
+Weitere Regeln:
 - Optionen sollen zur PERSOENLICHKEIT des Charakters passen
 - Mindestens eine kreative/unerwartete Option anbieten
 - Schwierigkeit variieren (nicht alles DC 12)

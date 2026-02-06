@@ -144,6 +144,7 @@ export class DungeonMaster {
 
     // Resolve mechanics based on action type
     let mechanicsContext = "";
+    let outcomeDirective = ""; // Clear instruction for the AI about what MUST happen
 
     if (action.type === "option" && action.optionId) {
       const selectedOption = previousTurn.options.find((o) => o.id === action.optionId);
@@ -159,15 +160,24 @@ export class DungeonMaster {
           if (combat.damageResult) {
             diceRolls.push(combat.damageResult);
           }
-          mechanicsContext = combat.attackResult.success
-            ? `[ATTACK HIT${combat.attackResult.criticalHit ? " - CRITICAL!" : ""}] Rolled ${combat.attackResult.total} vs AC ${enemyAC}. ${combat.damageResult ? `Dealt ${combat.damageResult.total} damage.` : ""}`
-            : `[ATTACK MISSED${combat.attackResult.criticalFail ? " - CRITICAL FAIL!" : ""}] Rolled ${combat.attackResult.total} vs AC ${enemyAC}.`;
+          if (combat.attackResult.success) {
+            mechanicsContext = `[ANGRIFF TRIFFT${combat.attackResult.criticalHit ? " - KRITISCH!" : ""}] Wuerfelergebnis ${combat.attackResult.total} gegen RK ${enemyAC}. ${combat.damageResult ? `${combat.damageResult.total} Schaden verursacht.` : ""}`;
+            outcomeDirective = `PFLICHT: Der Angriff TRIFFT. Beschreibe wie der Schlag/Zauber den Gegner trifft und Schaden verursacht.`;
+          } else {
+            mechanicsContext = `[ANGRIFF VERFEHLT${combat.attackResult.criticalFail ? " - PATZER!" : ""}] Wuerfelergebnis ${combat.attackResult.total} gegen RK ${enemyAC}.`;
+            outcomeDirective = `PFLICHT: Der Angriff VERFEHLT. Der Gegner weicht aus oder blockt. Der Spieler bleibt im Kampf.`;
+          }
         } else {
           const check = resolveSkillCheck(character, ability, difficulty, selectedOption.text);
           diceRolls.push(check);
-          mechanicsContext = check.success
-            ? `[CHECK PASSED${check.criticalHit ? " - NATURAL 20!" : ""}] ${ability} check: rolled ${check.total} vs DC ${check.results[0] + check.modifier >= (selectedOption.difficultyClass ?? 15) ? selectedOption.difficultyClass : "?"}.`
-            : `[CHECK FAILED${check.criticalFail ? " - NATURAL 1!" : ""}] ${ability} check: rolled ${check.total}.`;
+          const dc = selectedOption.difficultyClass ?? difficulty;
+          if (check.success) {
+            mechanicsContext = `[PROBE BESTANDEN${check.criticalHit ? " - NAT 20!" : ""}] ${ability}-Probe: ${check.total} gegen SG ${dc}.`;
+            outcomeDirective = `PFLICHT: Die Aktion "${action.text}" GELINGT VOLLSTAENDIG. Der Spieler erreicht sein Ziel. Wenn er irgendwo hinein will, ist er DRINNEN. Wenn er etwas oeffnen will, ist es OFFEN. Wenn er jemanden ueberzeugen will, ist die Person UEBERZEUGT.`;
+          } else {
+            mechanicsContext = `[PROBE GESCHEITERT${check.criticalFail ? " - NAT 1!" : ""}] ${ability}-Probe: ${check.total} gegen SG ${dc}.`;
+            outcomeDirective = `PFLICHT: Die Aktion "${action.text}" SCHEITERT. Der Spieler erreicht sein Ziel NICHT, aber er bleibt in der Szene. Beschreibe WARUM es nicht klappt (Tuer klemmt, Griff rutscht ab, Person misstraut). Biete neue Optionen an.`;
+          }
         }
       }
     }
@@ -200,9 +210,14 @@ export class DungeonMaster {
       recentContext = `${actionHistory}\n\nAktuelle Szene: ${previousTurn.narrative.slice(0, 500)}`;
     }
 
-    const playerActionText = mechanicsContext
-      ? `${action.text}\n${mechanicsContext}`
-      : action.text;
+    // Build player action text with clear outcome directive
+    let playerActionText = action.text;
+    if (mechanicsContext) {
+      playerActionText = `${action.text}\n\n${mechanicsContext}`;
+    }
+    if (outcomeDirective) {
+      playerActionText += `\n\n>>> ${outcomeDirective} <<<`;
+    }
 
     // Build scenario context from session if available
     const scenarioContext = session.genre && session.setting
@@ -388,18 +403,77 @@ export class DungeonMaster {
       return `${i + 1}. "${action}" → ${diceOutcome}: ${narrativeFirst}...`;
     });
 
-    // Get current location hint from the last turn's narrative
+    // Get current state from the last turn
     const lastTurn = recentTurns[recentTurns.length - 1];
-    const currentScene = lastTurn.narrative.slice(0, 150);
+    const currentScene = lastTurn.narrative.slice(0, 200);
+
+    // Infer current state from mood and narrative
+    const stateHints = this.inferCurrentState(lastTurn);
 
     return `=== AKTIONSHISTORIE (KRITISCH!) ===
 BISHERIGE AKTIONEN UND IHRE ERGEBNISSE:
 ${actionLines.join("\n")}
 
-AKTUELLE POSITION DES SPIELERS (hier geht es weiter!):
+AKTUELLER ZUSTAND:
+${stateHints}
+
+AKTUELLE SZENE (hier geht es weiter!):
 ${currentScene}...
 
 WICHTIG: Die naechste Erzaehlung MUSS LOGISCH an dieser Position anknuepfen!`;
+  }
+
+  /**
+   * Infer the current game state from the last turn for better AI context.
+   */
+  private inferCurrentState(turn: GameTurn): string {
+    const hints: string[] = [];
+
+    // Mood-based state
+    switch (turn.mood) {
+      case "combat":
+        hints.push("- Spieler ist IM KAMPF (Kampfoptionen anbieten, Gegner beschreiben)");
+        break;
+      case "danger":
+        hints.push("- Spieler ist in GEFAHR (Spannung aufbauen, Bedrohung praesent)");
+        break;
+      case "dialogue":
+        hints.push("- Spieler ist IM GESPRAECH mit einem NPC (Dialog fortsetzen)");
+        break;
+      case "mystery":
+        hints.push("- Spieler untersucht ein RAETSEL (Hinweise geben, nicht auflösen)");
+        break;
+      case "safe":
+        hints.push("- Spieler ist an einem SICHEREN ORT (Erholung, Planung moeglich)");
+        break;
+      case "exploration":
+        hints.push("- Spieler ERKUNDET die Umgebung (neue Details zeigen)");
+        break;
+    }
+
+    // Location hints from narrative keywords
+    const narrative = turn.narrative.toLowerCase();
+    if (narrative.includes("betritt") || narrative.includes("innere") || narrative.includes("raum") || narrative.includes("halle")) {
+      hints.push("- Spieler ist DRINNEN in einem Gebaeude/Raum");
+    }
+    if (narrative.includes("draussen") || narrative.includes("weg") || narrative.includes("pfad") || narrative.includes("wald") || narrative.includes("strasse")) {
+      hints.push("- Spieler ist DRAUSSEN im Freien");
+    }
+    if (narrative.includes("tuer") || narrative.includes("fenster") || narrative.includes("eingang")) {
+      hints.push("- Spieler ist an einem EINGANG/UEBERGANG");
+    }
+
+    // Action context from player's last action
+    if (turn.playerAction?.text) {
+      const action = turn.playerAction.text.toLowerCase();
+      const hadSuccess = turn.diceRolls.some((r) => r.success);
+
+      if ((action.includes("hinein") || action.includes("betreten") || action.includes("oeffnen") || action.includes("klettern")) && hadSuccess) {
+        hints.push("- LETZTE AKTION WAR ERFOLGREICH: Spieler hat sein Ziel erreicht!");
+      }
+    }
+
+    return hints.length > 0 ? hints.join("\n") : "- Normale Erkundungssituation";
   }
 
   private calculateImportance(events: GameEvent[], diceRolls: DiceRoll[]): number {

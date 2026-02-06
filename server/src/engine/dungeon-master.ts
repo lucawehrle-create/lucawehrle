@@ -360,17 +360,18 @@ export class DungeonMaster {
 
   /**
    * Build a compact action history from recent turns.
-   * This prevents the AI from suggesting the same options repeatedly.
+   * This prevents the AI from suggesting the same options repeatedly
+   * AND ensures logical story continuity.
    */
   private buildActionHistory(recentTurns: GameTurn[]): string {
     if (recentTurns.length === 0) {
       return "=== AKTIONSHISTORIE ===\nDies ist der erste Zug.";
     }
 
-    // Get the last 8 turns with player actions (skip turns without player action)
+    // Get the last 6 turns with player actions (skip turns without player action)
     const turnsWithActions = recentTurns
       .filter((t) => t.playerAction?.text)
-      .slice(-8);
+      .slice(-6);
 
     if (turnsWithActions.length === 0) {
       return "=== AKTIONSHISTORIE ===\nDies ist der erste Zug.";
@@ -378,19 +379,27 @@ export class DungeonMaster {
 
     const actionLines = turnsWithActions.map((t, i) => {
       const action = t.playerAction!.text;
-      // Add brief outcome hint from dice rolls if available
-      const outcome = t.diceRolls.length > 0
-        ? t.diceRolls.some((r) => r.success) ? " (Erfolg)" : " (Fehlschlag)"
-        : "";
-      return `${i + 1}. ${action}${outcome}`;
+      // Add outcome from dice rolls
+      const diceOutcome = t.diceRolls.length > 0
+        ? t.diceRolls.some((r) => r.success) ? "ERFOLG" : "FEHLSCHLAG"
+        : "ausgefuehrt";
+      // Extract first sentence of narrative as brief result (max 80 chars)
+      const narrativeFirst = t.narrative.split(/[.!?]/)[0]?.slice(0, 80) || "";
+      return `${i + 1}. "${action}" → ${diceOutcome}: ${narrativeFirst}...`;
     });
 
-    return `=== AKTIONSHISTORIE (KRITISCH - nicht wiederholen!) ===
-Der Spieler hat BEREITS folgende Aktionen ausgefuehrt:
+    // Get current location hint from the last turn's narrative
+    const lastTurn = recentTurns[recentTurns.length - 1];
+    const currentScene = lastTurn.narrative.slice(0, 150);
+
+    return `=== AKTIONSHISTORIE (KRITISCH!) ===
+BISHERIGE AKTIONEN UND IHRE ERGEBNISSE:
 ${actionLines.join("\n")}
 
-WICHTIG: Biete KEINE Optionen an, die der Spieler schon gemacht hat!
-Die naechsten Optionen muessen NEUE Moeglichkeiten bieten.`;
+AKTUELLE POSITION DES SPIELERS (hier geht es weiter!):
+${currentScene}...
+
+WICHTIG: Die naechste Erzaehlung MUSS LOGISCH an dieser Position anknuepfen!`;
   }
 
   private calculateImportance(events: GameEvent[], diceRolls: DiceRoll[]): number {

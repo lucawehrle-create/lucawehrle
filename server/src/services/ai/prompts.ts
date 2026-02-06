@@ -43,6 +43,25 @@ Passe Ton und Atmosphaere an das Szenario-Genre an (wird im SZENARIO-Kontext ang
 - Entscheidungen haben KONSEQUENZEN: Freundliche Handlungen werden belohnt, aggressive haben Folgen
 - Zeitlicher Fortschritt: Tageszeit, Muedigkeit, Hunger erwaehnen wenn passend
 
+=== AKTIONSLOGIK (KRITISCH!) ===
+Die Erzaehlung MUSS LOGISCH zur Spieleraktion passen!
+
+WUERFEL-ERGEBNISSE RESPEKTIEREN:
+- Bei ERFOLG: Der Spieler ERREICHT sein Ziel. Die Aktion GELINGT.
+- Bei FEHLSCHLAG: Die Aktion scheitert, aber der Spieler bleibt in der Szene.
+
+BEISPIELE:
+- Aktion: "Durch das Fenster klettern" + ERFOLG → Spieler ist DRINNEN im Gebaeude
+- Aktion: "Durch das Fenster klettern" + FEHLSCHLAG → Spieler ist noch DRAUSSEN, Fenster klemmt
+- Aktion: "Die Tuer oeffnen" + ERFOLG → Tuer ist OFFEN, Spieler sieht was dahinter ist
+- Aktion: "Den Wachmann ablenken" + ERFOLG → Wachmann ist ABGELENKT
+
+VERBOTEN:
+- Spieler will REIN, Erfolg, aber Erzaehlung zeigt ihn DRAUSSEN
+- Spieler will NACH LINKS, aber Erzaehlung fuehrt ihn NACH RECHTS
+- Spieler will SPRECHEN, aber niemand ist da zum Reden
+- Das Ergebnis einer Aktion IGNORIEREN oder UMKEHREN
+
 === STORY-FORTSCHRITT (KRITISCH!) ===
 JEDE Spieleraktion MUSS die Geschichte VORANTREIBEN. Wiederholung ist VERBOTEN!
 

@@ -81,34 +81,142 @@ export class GeminiAIService implements AIService {
   }
 
   async generateText(request: TextGenerationRequest): Promise<TextGenerationResponse> {
-    return withRetry(async () => {
-      const userPrompt = buildTextPrompt(request);
+    const maxAttempts = 4; // Increased retries
+    let lastError: unknown;
+    let lastRawText = "";
 
-      const model = this.genAI.getGenerativeModel({
-        model: this.textModel,
-        systemInstruction: DUNGEON_MASTER_SYSTEM_PROMPT,
-      });
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const userPrompt = buildTextPrompt(request);
 
-      const result = await model.generateContent(userPrompt);
-      const rawText = result.response.text();
+        const model = this.genAI.getGenerativeModel({
+          model: this.textModel,
+          systemInstruction: DUNGEON_MASTER_SYSTEM_PROMPT,
+        });
 
-      const parsed = parseJSON(rawText, TEXT_GENERATION_FALLBACK);
+        const result = await model.generateContent(userPrompt);
+        const rawText = result.response.text();
+        lastRawText = rawText;
 
-      const usage = result.response.usageMetadata;
+        // Try to parse the JSON
+        let parsed: typeof TEXT_GENERATION_FALLBACK;
+        try {
+          let cleaned = rawText.trim();
+          if (cleaned.startsWith("```")) {
+            cleaned = cleaned.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "");
+          }
+          parsed = JSON.parse(cleaned);
+        } catch (parseError) {
+          // JSON parsing failed - retry with a simpler prompt on next attempt
+          console.warn(
+            `[GeminiAIService] JSON parse failed (attempt ${attempt + 1}/${maxAttempts}):`,
+            rawText.slice(0, 100),
+          );
+          if (attempt < maxAttempts - 1) {
+            // Wait before retry
+            await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+            continue;
+          }
+          throw parseError;
+        }
 
-      return {
-        narrative: parsed.narrative,
-        mood: parsed.mood,
-        options: parsed.options,
-        imagePrompt: parsed.imagePrompt,
-        events: parsed.events ?? [],
-        tokenUsage: {
-          promptTokens: usage?.promptTokenCount ?? 0,
-          completionTokens: usage?.candidatesTokenCount ?? 0,
-          totalTokens: usage?.totalTokenCount ?? 0,
-        },
-      };
-    });
+        // Validate that we have actual content, not empty narrative
+        if (!parsed.narrative || parsed.narrative.length < 20) {
+          console.warn(`[GeminiAIService] Empty/short narrative (attempt ${attempt + 1}):`, parsed.narrative);
+          if (attempt < maxAttempts - 1) {
+            await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+            continue;
+          }
+        }
+
+        const usage = result.response.usageMetadata;
+
+        return {
+          narrative: parsed.narrative,
+          mood: parsed.mood,
+          options: parsed.options,
+          imagePrompt: parsed.imagePrompt,
+          events: parsed.events ?? [],
+          tokenUsage: {
+            promptTokens: usage?.promptTokenCount ?? 0,
+            completionTokens: usage?.candidatesTokenCount ?? 0,
+            totalTokens: usage?.totalTokenCount ?? 0,
+          },
+        };
+      } catch (error) {
+        lastError = error;
+        console.error(
+          `[GeminiAIService] Text generation failed (attempt ${attempt + 1}/${maxAttempts}):`,
+          error instanceof Error ? error.message : error,
+        );
+        if (attempt < maxAttempts - 1) {
+          // Exponential backoff
+          const delay = 1500 * Math.pow(2, attempt);
+          await new Promise((r) => setTimeout(r, delay));
+        }
+      }
+    }
+
+    // All retries exhausted - generate a context-aware fallback
+    console.error("[GeminiAIService] All retries exhausted, using context-aware fallback. Last raw:", lastRawText.slice(0, 200));
+    return this.generateContextAwareFallback(request);
+  }
+
+  /**
+   * Generate a context-aware fallback when the AI completely fails.
+   * This is better than the generic "Die Welt um dich herum..." message.
+   */
+  private generateContextAwareFallback(request: TextGenerationRequest): TextGenerationResponse {
+    // Extract action from request
+    const action = request.playerAction.split("\n")[0]; // First line is the action text
+
+    // Generate a simple but context-relevant response
+    const narratives: Record<string, string> = {
+      combat: `Du fuehrst deinen Angriff aus, doch die Situation bleibt angespannt. Dein Gegner weicht zurueck und wartet auf deine naechste Bewegung. Der Kampf ist noch nicht entschieden.`,
+      exploration: `Du bewegst dich vorsichtig weiter. Die Umgebung ist still, aber du spuerst, dass hier mehr verborgen liegt. Ein leises Gerausch in der Ferne laesst dich innehalten.`,
+      dialogue: `Die Worte hallen in der Stille nach. Dein Gegenueber scheint nachzudenken, bevor eine Antwort kommt. Die Spannung ist spuerbar.`,
+      mystery: `Du untersuchst die Umgebung genauer. Etwas stimmt hier nicht ganz, aber du kannst es noch nicht greifen. Vielleicht gibt es noch mehr zu entdecken.`,
+      safe: `Ein Moment der Ruhe. Du nutzt die Gelegenheit, dich umzusehen und deine naechsten Schritte zu planen.`,
+      danger: `Die Gefahr lauert im Schatten. Du bleibst wachsam und bereit, auf alles zu reagieren, was als naechstes geschehen koennte.`,
+    };
+
+    const mood = request.mood || "exploration";
+    const narrative = narratives[mood] || narratives.exploration;
+
+    // Generate context-appropriate options
+    const optionsByMood: Record<string, typeof TEXT_GENERATION_FALLBACK.options> = {
+      combat: [
+        { text: "Erneut angreifen", type: "combat", difficultyClass: 12 },
+        { text: "Verteidigungshaltung einnehmen", type: "defend", difficultyClass: 10 },
+        { text: "Versuchen, zu fliehen", type: "skill", difficultyClass: 14 },
+      ],
+      exploration: [
+        { text: "Die Umgebung genauer untersuchen", type: "exploration", difficultyClass: 10 },
+        { text: "Vorsichtig weitergehen", type: "exploration", difficultyClass: 8 },
+        { text: "Nach Hinweisen suchen", type: "skill", difficultyClass: 12 },
+      ],
+      dialogue: [
+        { text: "Das Gespraech fortsetzen", type: "social", difficultyClass: 10 },
+        { text: "Nachhaken und mehr erfahren", type: "social", difficultyClass: 13 },
+        { text: "Das Gespraech beenden", type: "social", difficultyClass: 8 },
+      ],
+      default: [
+        { text: "Die Situation einschaetzen", type: "exploration", difficultyClass: 10 },
+        { text: "Vorsichtig vorgehen", type: "exploration", difficultyClass: 8 },
+        { text: "Nach einem anderen Weg suchen", type: "skill", difficultyClass: 12 },
+      ],
+    };
+
+    const options = optionsByMood[mood] || optionsByMood.default;
+
+    return {
+      narrative,
+      mood,
+      options,
+      imagePrompt: undefined,
+      events: [],
+      tokenUsage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+    };
   }
 
   async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {

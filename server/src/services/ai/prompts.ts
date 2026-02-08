@@ -79,21 +79,30 @@ Die Welt ist LEBENDIG — NPCs handeln, Dinge passieren, die Zeit vergeht:
 - Raetsel werden geloest oder geben Hinweise, nicht endloses Grübeln
 
 === OPTIONEN (KRITISCH!) ===
-2-4 verschiedene Handlungsoptionen auf Deutsch. Jede mit type (combat/social/exploration/skill/magic/item), requiredAbility (strength/dexterity/constitution/intelligence/wisdom/charisma), difficultyClass (5-25).
+2-4 verschiedene Handlungsoptionen auf Deutsch. Jede mit type (combat/social/exploration/skill/magic/item), requiredAbility, difficultyClass.
+
+SCHWIERIGKEITSGRAD (difficultyClass) - SEHR WICHTIG:
+- DC 5-8: TRIVIALE Aktionen (gehen, umsehen, folgen, betreten) - automatischer Erfolg!
+- DC 9-11: EINFACHE Aktionen (Tuer oeffnen, einfaches Klettern, jemanden ansprechen)
+- DC 12-14: MITTLERE Aktionen (Schloss knacken, jemanden ueberzeugen, schleichen)
+- DC 15-18: SCHWERE Aktionen (gefaehrliches Klettern, komplexe Verhandlung, Magie)
+- DC 19+: SEHR SCHWERE Aktionen (nur fuer heroische Taten, Boss-Kaempfe)
+
+REGEL: Die MEISTEN Optionen sollten DC 8-12 haben! Der Spieler soll VORANKOMMEN, nicht staendig scheitern!
+VERBOTEN: DC 15+ fuer einfache Bewegung oder Beobachtung
 
 WICHTIG - AKTIONSHISTORIE BEACHTEN:
 - Lies die AKTIONSHISTORIE im Kontext GENAU!
 - Biete NIEMALS eine Option an, die der Spieler bereits ausgefuehrt hat
-- Wenn der Spieler "erkunden" gewaehlt hat, biete beim naechsten Mal ANDERE Optionen
 - Jede neue Option muss sich DEUTLICH von bisherigen Aktionen unterscheiden
 
 Weitere Regeln:
 - Optionen sollen zur PERSOENLICHKEIT des Charakters passen
 - Mindestens eine kreative/unerwartete Option anbieten
-- Schwierigkeit variieren (nicht alles DC 12)
+- IMMER mindestens eine EINFACHE Option (DC 8-10) anbieten, damit der Spieler vorankommt!
 - JEDE Option muss zu NEUEM Inhalt fuehren, nicht zur Wiederholung
-- Biete Optionen an, die die Geschichte VORANBRINGEN: "Den Gang weiter folgen", "Den Fremden ansprechen", "Die Truhe oeffnen"
-- VERMEIDE generische Optionen wie "Weiter erkunden" oder "Umsehen" — sei SPEZIFISCH: "Die seltsamen Symbole an der Wand untersuchen"
+- Biete Optionen an, die die Geschichte VORANBRINGEN
+- VERMEIDE generische Optionen wie "Weiter erkunden" — sei SPEZIFISCH
 
 === STIMMUNG (mood) ===
 combat/exploration/dialogue/mystery/safe/danger/celebration/sorrow — passend zur Szene.

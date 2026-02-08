@@ -168,15 +168,26 @@ export class DungeonMaster {
             outcomeDirective = `PFLICHT: Der Angriff VERFEHLT. Der Gegner weicht aus oder blockt. Der Spieler bleibt im Kampf.`;
           }
         } else {
-          const check = resolveSkillCheck(character, ability, difficulty, selectedOption.text);
-          diceRolls.push(check);
-          const dc = selectedOption.difficultyClass ?? difficulty;
-          if (check.success) {
-            mechanicsContext = `[PROBE BESTANDEN${check.criticalHit ? " - NAT 20!" : ""}] ${ability}-Probe: ${check.total} gegen SG ${dc}.`;
-            outcomeDirective = `PFLICHT: Die Aktion "${action.text}" GELINGT VOLLSTAENDIG. Der Spieler erreicht sein Ziel. Wenn er irgendwo hinein will, ist er DRINNEN. Wenn er etwas oeffnen will, ist es OFFEN. Wenn er jemanden ueberzeugen will, ist die Person UEBERZEUGT.`;
+          // Check if this is a trivial action that should auto-succeed
+          const dc = selectedOption.difficultyClass ?? 10;
+          const isTrivialAction = this.isTrivialAction(selectedOption, action.text, dc);
+
+          if (isTrivialAction) {
+            // AUTO-SUCCESS for trivial actions - no dice roll needed!
+            mechanicsContext = `[AUTOMATISCHER ERFOLG] Einfache Aktion ohne Wuerfelwurf.`;
+            outcomeDirective = `PFLICHT: Die Aktion "${action.text}" GELINGT AUTOMATISCH. Diese Aktion ist einfach genug, dass sie keinen Wuerfelwurf erfordert. Beschreibe wie der Spieler erfolgreich ist und die Geschichte voranschreitet.`;
           } else {
-            mechanicsContext = `[PROBE GESCHEITERT${check.criticalFail ? " - NAT 1!" : ""}] ${ability}-Probe: ${check.total} gegen SG ${dc}.`;
-            outcomeDirective = `PFLICHT: Die Aktion "${action.text}" SCHEITERT. Der Spieler erreicht sein Ziel NICHT, aber er bleibt in der Szene. Beschreibe WARUM es nicht klappt (Tuer klemmt, Griff rutscht ab, Person misstraut). Biete neue Optionen an.`;
+            // Normal skill check for non-trivial actions
+            const check = resolveSkillCheck(character, ability, difficulty, selectedOption.text);
+            diceRolls.push(check);
+            if (check.success) {
+              mechanicsContext = `[PROBE BESTANDEN${check.criticalHit ? " - NAT 20!" : ""}] ${ability}-Probe: ${check.total} gegen SG ${dc}.`;
+              outcomeDirective = `PFLICHT: Die Aktion "${action.text}" GELINGT VOLLSTAENDIG. Der Spieler erreicht sein Ziel. Wenn er irgendwo hinein will, ist er DRINNEN. Wenn er etwas oeffnen will, ist es OFFEN. Wenn er jemanden ueberzeugen will, ist die Person UEBERZEUGT.`;
+            } else {
+              mechanicsContext = `[PROBE GESCHEITERT${check.criticalFail ? " - NAT 1!" : ""}] ${ability}-Probe: ${check.total} gegen SG ${dc}.`;
+              // "Fail Forward" - even on failure, something happens to advance the story
+              outcomeDirective = `PFLICHT: Die Aktion "${action.text}" SCHEITERT TEILWEISE. Der Spieler erreicht sein Ziel nicht wie geplant, ABER die Geschichte geht trotzdem weiter. Statt komplettem Stillstand: Eine Komplikation tritt auf, ein neuer Hinweis erscheint, oder ein alternativer Weg oeffnet sich. Der Spieler kommt TROTZDEM voran, nur anders als erwartet.`;
+            }
           }
         }
       }
@@ -474,6 +485,64 @@ WICHTIG: Die naechste Erzaehlung MUSS LOGISCH an dieser Position anknuepfen!`;
     }
 
     return hints.length > 0 ? hints.join("\n") : "- Normale Erkundungssituation";
+  }
+
+  /**
+   * Determine if an action is trivial and should auto-succeed without dice roll.
+   * This prevents frustrating gameplay where simple actions like "walk forward" fail.
+   */
+  private isTrivialAction(option: ActionOption, actionText: string, dc: number): boolean {
+    // Very low DC actions always auto-succeed
+    if (dc <= 8) return true;
+
+    // Certain action types are typically trivial
+    const trivialTypes = ["exploration"];
+    if (trivialTypes.includes(option.type) && dc <= 10) return true;
+
+    // Check for trivial action keywords in the action text
+    const trivialKeywords = [
+      // Movement
+      "gehen", "laufen", "weitergehen", "folgen", "betreten", "verlassen",
+      "hinaufsteigen", "hinabsteigen", "ueberqueren", "durchqueren",
+      // Looking/Observing (no interaction)
+      "umsehen", "beobachten", "schauen", "blicken", "ansehen",
+      // Simple interactions
+      "nehmen", "aufheben", "ablegen", "hinlegen",
+      // Waiting/Resting
+      "warten", "rasten", "ausruhen",
+    ];
+
+    const lowerAction = actionText.toLowerCase();
+    const hasTrivialKeyword = trivialKeywords.some((kw) => lowerAction.includes(kw));
+
+    // If it has a trivial keyword AND DC is not high, auto-succeed
+    if (hasTrivialKeyword && dc <= 12) return true;
+
+    // Check for NON-trivial keywords that should ALWAYS require a roll
+    const nonTrivialKeywords = [
+      // Combat
+      "angreifen", "kaempfen", "schlagen", "toeten",
+      // Stealth/Deception
+      "schleichen", "verstecken", "luegen", "taeuschen", "stehlen",
+      // Persuasion/Social
+      "ueberzeugen", "ueberreden", "verhandeln", "einschuechtern",
+      // Difficult physical
+      "klettern", "springen", "balancieren", "schwimmen",
+      // Magic/Special
+      "zaubern", "wirken", "beschworen",
+      // Locks/Traps
+      "knacken", "oeffnen.*schloss", "entschaerfen",
+    ];
+
+    const hasNonTrivialKeyword = nonTrivialKeywords.some((kw) =>
+      new RegExp(kw, "i").test(lowerAction)
+    );
+
+    // If it has a non-trivial keyword, always require roll
+    if (hasNonTrivialKeyword) return false;
+
+    // Default: if DC is 10 or less and no non-trivial keyword, auto-succeed
+    return dc <= 10;
   }
 
   private calculateImportance(events: GameEvent[], diceRolls: DiceRoll[]): number {

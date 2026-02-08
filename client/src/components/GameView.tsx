@@ -7,6 +7,7 @@ import type { GameTurn, ActionOption } from "@aetheria/shared";
 import { DiceRollDisplay } from "./DiceRollDisplay.js";
 import { InventoryPanel } from "./InventoryPanel.js";
 import { QuestPanel } from "./QuestPanel.js";
+import { QuestTracker } from "./QuestTracker.js";
 import { Typewriter } from "./Typewriter.js";
 import { AtmosphericEffects } from "./AtmosphericEffects.js";
 import { CharacterStatusBar } from "./CharacterStatusBar.js";
@@ -298,6 +299,13 @@ export function GameView() {
             prevSceneImage={prevSceneImage}
             isLoading={expectsNewImage && sceneImageLoading && !polledImageUrl}
           />
+          {/* Compact quest tracker overlay */}
+          <div className={styles.questTrackerOverlay}>
+            <QuestTracker
+              questLog={state.questLog}
+              onOpenQuests={() => { setShowQuests(true); setShowInventory(false); }}
+            />
+          </div>
         </div>
 
         {/* Right: Narrative + optional sidebar */}
@@ -467,6 +475,7 @@ const NOTIF_ICONS: Record<GameNotification["type"], string> = {
   level_up: "\uD83C\uDF89",
   quest_complete: "\uD83C\uDFC6",
   quest_start: "\uD83D\uDCDC",
+  quest_progress: "\u2705",
 };
 
 function NotificationToast({

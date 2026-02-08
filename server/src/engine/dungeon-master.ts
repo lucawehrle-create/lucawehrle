@@ -394,13 +394,16 @@ export class DungeonMaster {
 
     // Add quest progress events
     for (const update of questUpdates) {
-      if (update.objective.completed) {
+      if (update.newlyCompleted) {
+        // Objective was just completed - show celebration notification
         events.push({
-          type: "narrative_update",
+          type: "quest_progress",
           payload: {
-            message: `Quest-Ziel erreicht: ${update.objective.description}`,
             questId: update.quest.id,
             questTitle: update.quest.title,
+            objectiveId: update.objective.id,
+            objectiveDescription: update.objective.description,
+            completed: true,
           },
           turnId,
           timestamp: new Date().toISOString(),
@@ -703,8 +706,8 @@ WICHTIG: Die naechste Erzaehlung MUSS LOGISCH an dieser Position anknuepfen!`;
     questManager: QuestManager,
     action: PlayerAction,
     previousTurn: GameTurn
-  ): { quest: import("@aetheria/shared").Quest; objective: import("@aetheria/shared").QuestObjective }[] {
-    const updates: { quest: import("@aetheria/shared").Quest; objective: import("@aetheria/shared").QuestObjective }[] = [];
+  ): { quest: import("@aetheria/shared").Quest; objective: import("@aetheria/shared").QuestObjective; newlyCompleted: boolean }[] {
+    const updates: { quest: import("@aetheria/shared").Quest; objective: import("@aetheria/shared").QuestObjective; newlyCompleted: boolean }[] = [];
     const actionText = action.text.toLowerCase();
     const narrativeText = previousTurn.narrative.toLowerCase();
 

@@ -269,6 +269,18 @@
   pointer-events: none;
 }
 
+/* Quest tracker overlay positioned over scene */
+.questTrackerOverlay {
+  position: absolute;
+  bottom: var(--space-md);
+  left: var(--space-md);
+  right: var(--space-md);
+  z-index: 6;
+  pointer-events: auto;
+  display: flex;
+  justify-content: flex-start;
+}
+
 /* Loading shimmer (fills side panel) */
 .scenePanelShimmer {
   position: absolute;
@@ -998,6 +1010,12 @@
 
   .sceneColumn {
     height: 25vh;
+  }
+
+  .questTrackerOverlay {
+    bottom: var(--space-xs);
+    left: var(--space-xs);
+    right: var(--space-xs);
   }
 
   .narrativeScroll {

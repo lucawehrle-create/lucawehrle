@@ -1,45 +1,68 @@
+/* ============================================
+   Quest Panel - Full quest log sidebar
+   ============================================ */
+
 .panel {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--color-surface);
+  background: linear-gradient(180deg, rgba(12, 12, 20, 0.98), rgba(8, 8, 14, 0.99));
+  overflow: hidden;
 }
 
+/* Header */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: var(--space-md) var(--space-lg);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid rgba(196, 163, 90, 0.15);
+  background: linear-gradient(180deg, rgba(196, 163, 90, 0.05), transparent);
 }
 
 .title {
   font-family: var(--font-heading);
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  background: linear-gradient(135deg, #e0d5c0, #c4a35a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.title::before {
+  content: "\2B50";
+  -webkit-text-fill-color: initial;
+  font-size: 1rem;
 }
 
 .closeButton {
   padding: var(--space-xs) var(--space-sm);
   background: transparent;
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
   color: var(--color-text-muted);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
 .closeButton:hover {
-  border-color: var(--color-text-muted);
-  color: var(--color-text);
+  border-color: rgba(196, 163, 90, 0.4);
+  color: rgba(196, 163, 90, 0.9);
+  background: rgba(196, 163, 90, 0.08);
 }
 
+/* Stats bar */
 .statsBar {
   display: flex;
   justify-content: space-around;
-  align-items: center;
-  padding: var(--space-sm) var(--space-lg);
-  background: rgba(51, 154, 240, 0.05);
-  border-bottom: 1px solid var(--color-border);
+  align-items: stretch;
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .stat {
@@ -47,94 +70,238 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  padding: var(--space-xs) var(--space-md);
+  position: relative;
+}
+
+.stat:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .statLabel {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .statValue {
-  font-weight: 600;
-  color: #339af0;
-  font-size: 1rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
 }
 
+/* First stat (completed) - gold themed */
+.stat:nth-child(1) .statValue {
+  background: linear-gradient(135deg, #ffd43b, #fab005);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Second stat (XP) - green themed */
+.stat:nth-child(2) .statValue {
+  background: linear-gradient(135deg, #51cf66, #40c057);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Scrollable content area */
+.scrollArea {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Section */
 .section {
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-md) var(--space-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.section:last-child {
+  border-bottom: none;
 }
 
 .sectionTitle {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.2px;
   color: var(--color-text-muted);
   margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
 }
 
+.sectionTitle::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.4;
+}
+
+/* Quest list */
 .questList {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
-  overflow-y: auto;
 }
 
+/* Empty message */
 .emptyMessage {
   color: var(--color-text-muted);
-  font-size: 0.9rem;
-  padding: var(--space-lg);
+  font-size: 0.85rem;
+  padding: var(--space-xl) var(--space-lg);
   text-align: center;
-  line-height: 1.6;
+  line-height: 1.7;
+  font-style: italic;
 }
 
+.emptyMessage::before {
+  content: "\uD83D\uDCDC";
+  display: block;
+  font-size: 2rem;
+  margin-bottom: var(--space-sm);
+  opacity: 0.4;
+}
+
+/* ============================================
+   Quest Card
+   ============================================ */
 .questCard {
   padding: var(--space-md);
-  background: var(--color-surface-alt);
-  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, rgba(30, 30, 45, 0.6), rgba(20, 20, 32, 0.8));
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-left: 3px solid var(--color-border);
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-  transition: background var(--transition-fast);
   cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.questCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
 }
 
 .questCard:hover {
-  background: var(--color-surface);
+  background: linear-gradient(135deg, rgba(40, 40, 60, 0.7), rgba(25, 25, 40, 0.9));
+  transform: translateX(2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .questCardExpanded {
-  background: var(--color-surface);
+  background: linear-gradient(135deg, rgba(45, 45, 65, 0.8), rgba(30, 30, 45, 0.95));
   border-left-width: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .questCardCompleted {
-  opacity: 0.7;
+  opacity: 0.6;
+  background: linear-gradient(135deg, rgba(25, 30, 25, 0.5), rgba(18, 22, 18, 0.7));
+  border-left-color: #51cf66;
 }
 
+.questCardCompleted::after {
+  content: "\u2713";
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  width: 20px;
+  height: 20px;
+  background: rgba(81, 207, 102, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #51cf66;
+}
+
+/* Quest header */
 .questHeader {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.questTitleArea {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.questIcon {
+  font-size: 1rem;
+  margin-right: var(--space-xs);
 }
 
 .questTitle {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+.questPriority {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  width: fit-content;
+}
+
+.questPriorityMain {
+  color: #ffd43b;
+  background: rgba(255, 212, 59, 0.12);
+}
+
+.questPrioritySide {
+  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .questDifficulty {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.05);
 }
 
+/* Progress bar */
 .progressBar {
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 3px;
   position: relative;
   overflow: hidden;
@@ -144,34 +311,60 @@
 .progressFill {
   height: 100%;
   border-radius: 3px;
-  transition: width 0.3s ease;
+  transition: width 0.4s ease-out;
+  box-shadow: 0 0 8px currentColor;
 }
 
 .progressText {
   position: absolute;
   right: 0;
-  top: -16px;
-  font-size: 0.65rem;
+  top: -15px;
+  font-size: 0.6rem;
+  font-weight: 600;
   color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
+/* Quest giver info */
+.questGiver {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.questGiver::before {
+  content: "\uD83D\uDDE3\uFE0F";
+  font-size: 0.7rem;
+}
+
+/* Quest description */
 .questDescription {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.55;
   margin-top: var(--space-xs);
+  padding: var(--space-xs) 0;
+  border-top: 1px dashed rgba(255, 255, 255, 0.05);
 }
 
+/* Objectives section */
 .objectives {
   margin-top: var(--space-sm);
+  padding: var(--space-sm);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-sm);
 }
 
 .objectivesTitle {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   color: var(--color-text-muted);
   margin-bottom: var(--space-xs);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+  font-weight: 600;
 }
 
 .objective {
@@ -179,65 +372,141 @@
   align-items: flex-start;
   gap: var(--space-xs);
   padding: var(--space-xs) 0;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  transition: opacity var(--transition-fast);
 }
 
 .objectiveComplete {
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .objectiveComplete .objectiveText {
   text-decoration: line-through;
+  text-decoration-color: rgba(81, 207, 102, 0.6);
 }
 
 .objectiveCheck {
   width: 16px;
-  text-align: center;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  font-size: 0.7rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .objectiveComplete .objectiveCheck {
   color: #51cf66;
+  background: rgba(81, 207, 102, 0.15);
+  border-color: rgba(81, 207, 102, 0.3);
 }
 
 .objectiveText {
   flex: 1;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .objectiveProgress {
-  color: var(--color-text-muted);
-  font-size: 0.8em;
+  color: var(--mood-primary, #c4a35a);
+  font-weight: 600;
+  font-size: 0.9em;
+  font-variant-numeric: tabular-nums;
 }
 
 .optionalBadge {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   color: var(--color-text-muted);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   padding: 1px 6px;
   border-radius: var(--radius-sm);
   margin-left: var(--space-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
+/* Rewards section */
 .rewards {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-sm);
   margin-top: var(--space-sm);
-  padding-top: var(--space-sm);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 0.8rem;
+  padding: var(--space-sm);
+  background: linear-gradient(135deg, rgba(196, 163, 90, 0.08), rgba(196, 163, 90, 0.02));
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(196, 163, 90, 0.1);
+  font-size: 0.75rem;
 }
 
 .rewardLabel {
   color: var(--color-text-muted);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .rewardXP {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 700;
   color: #51cf66;
-  font-weight: 600;
+  text-shadow: 0 0 8px rgba(81, 207, 102, 0.3);
+}
+
+.rewardXP::before {
+  content: "\u2B50";
+  font-size: 0.7rem;
 }
 
 .rewardGold {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 700;
   color: #ffd43b;
-  font-weight: 600;
+  text-shadow: 0 0 8px rgba(255, 212, 59, 0.3);
+}
+
+.rewardGold::before {
+  content: "\uD83D\uDCB0";
+  font-size: 0.7rem;
+}
+
+/* Animation for new quests */
+@keyframes questSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.questCard {
+  animation: questSlideIn 0.3s ease;
+}
+
+/* Scrollbar styling */
+.scrollArea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollArea::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.scrollArea::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }

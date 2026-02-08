@@ -1,7 +1,7 @@
 import React from "react";
 import { useGame } from "../context/GameContext.js";
-import type { Quest, QuestObjective, QuestDifficulty } from "@aetheria/shared";
-import { getQuestProgress } from "@aetheria/shared";
+import type { Quest, QuestObjective, QuestDifficulty, QuestPriority } from "@aetheria/shared";
+import { getQuestProgress, getQuestIcon } from "@aetheria/shared";
 import styles from "./QuestPanel.module.css";
 
 const DIFFICULTY_LABELS: Record<QuestDifficulty, string> = {
@@ -30,10 +30,18 @@ export function QuestPanel({ onClose }: QuestPanelProps) {
   const availableQuests = questLog?.activeQuests.filter((q) => q.status === "available") ?? [];
   const completedQuests = questLog?.completedQuests ?? [];
 
+  // Sort active quests: main quests first, then by difficulty
+  const sortedActiveQuests = [...activeQuests].sort((a, b) => {
+    if (a.priority === "main" && b.priority !== "main") return -1;
+    if (a.priority !== "main" && b.priority === "main") return 1;
+    const diffOrder = { epic: 0, challenging: 1, standard: 2, simple: 3 };
+    return diffOrder[a.difficulty] - diffOrder[b.difficulty];
+  });
+
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
-        <h3 className={styles.title}>Quests</h3>
+        <h3 className={styles.title}>Quest-Log</h3>
         <button className={styles.closeButton} onClick={onClose}>
           Schliessen
         </button>
@@ -43,53 +51,55 @@ export function QuestPanel({ onClose }: QuestPanelProps) {
         <>
           <div className={styles.statsBar}>
             <span className={styles.stat}>
-              <span className={styles.statLabel}>Abgeschlossen:</span>
+              <span className={styles.statLabel}>Abgeschlossen</span>
               <span className={styles.statValue}>{questLog.totalQuestsCompleted}</span>
             </span>
             <span className={styles.stat}>
-              <span className={styles.statLabel}>XP von Quests:</span>
+              <span className={styles.statLabel}>XP verdient</span>
               <span className={styles.statValue}>{questLog.totalExperienceFromQuests}</span>
             </span>
           </div>
 
-          {activeQuests.length > 0 && (
-            <div className={styles.section}>
-              <h4 className={styles.sectionTitle}>Aktive Quests</h4>
-              <div className={styles.questList}>
-                {activeQuests.map((quest) => (
-                  <QuestCard key={quest.id} quest={quest} />
-                ))}
+          <div className={styles.scrollArea}>
+            {sortedActiveQuests.length > 0 && (
+              <div className={styles.section}>
+                <h4 className={styles.sectionTitle}>Aktive Quests</h4>
+                <div className={styles.questList}>
+                  {sortedActiveQuests.map((quest) => (
+                    <QuestCard key={quest.id} quest={quest} />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {availableQuests.length > 0 && (
-            <div className={styles.section}>
-              <h4 className={styles.sectionTitle}>Verfuegbare Quests</h4>
-              <div className={styles.questList}>
-                {availableQuests.map((quest) => (
-                  <QuestCard key={quest.id} quest={quest} />
-                ))}
+            {availableQuests.length > 0 && (
+              <div className={styles.section}>
+                <h4 className={styles.sectionTitle}>Verfuegbare Quests</h4>
+                <div className={styles.questList}>
+                  {availableQuests.map((quest) => (
+                    <QuestCard key={quest.id} quest={quest} />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {completedQuests.length > 0 && (
-            <div className={styles.section}>
-              <h4 className={styles.sectionTitle}>Abgeschlossene Quests</h4>
-              <div className={styles.questList}>
-                {completedQuests.slice(-5).map((quest) => (
-                  <QuestCard key={quest.id} quest={quest} />
-                ))}
+            {completedQuests.length > 0 && (
+              <div className={styles.section}>
+                <h4 className={styles.sectionTitle}>Abgeschlossene Quests</h4>
+                <div className={styles.questList}>
+                  {completedQuests.slice(-5).reverse().map((quest) => (
+                    <QuestCard key={quest.id} quest={quest} />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {activeQuests.length === 0 && availableQuests.length === 0 && completedQuests.length === 0 && (
-            <p className={styles.emptyMessage}>
-              Keine Quests verfuegbar. Erkunde die Welt, um neue Aufgaben zu finden!
-            </p>
-          )}
+            {sortedActiveQuests.length === 0 && availableQuests.length === 0 && completedQuests.length === 0 && (
+              <p className={styles.emptyMessage}>
+                Keine Quests verfuegbar. Erkunde die Welt, um neue Aufgaben zu finden!
+              </p>
+            )}
+          </div>
         </>
       )}
 
@@ -105,6 +115,7 @@ function QuestCard({ quest }: { quest: Quest }) {
   const progress = getQuestProgress(quest);
   const difficultyColor = DIFFICULTY_COLORS[quest.difficulty];
   const isCompleted = quest.status === "completed";
+  const icon = getQuestIcon(quest.iconType);
 
   return (
     <div
@@ -113,7 +124,17 @@ function QuestCard({ quest }: { quest: Quest }) {
       onClick={() => setExpanded(!expanded)}
     >
       <div className={styles.questHeader}>
-        <span className={styles.questTitle}>{quest.title}</span>
+        <div className={styles.questTitleArea}>
+          <span
+            className={`${styles.questPriority} ${quest.priority === "main" ? styles.questPriorityMain : styles.questPrioritySide}`}
+          >
+            {quest.priority === "main" ? "Hauptquest" : "Nebenquest"}
+          </span>
+          <span className={styles.questTitle}>
+            <span className={styles.questIcon}>{icon}</span>
+            {quest.title}
+          </span>
+        </div>
         <span className={styles.questDifficulty} style={{ color: difficultyColor }}>
           {DIFFICULTY_LABELS[quest.difficulty]}
         </span>
@@ -131,10 +152,17 @@ function QuestCard({ quest }: { quest: Quest }) {
 
       {expanded && (
         <>
+          {quest.giver && (
+            <div className={styles.questGiver}>
+              {quest.giver}
+              {quest.giverTitle && ` - ${quest.giverTitle}`}
+            </div>
+          )}
+
           <p className={styles.questDescription}>{quest.description}</p>
 
           <div className={styles.objectives}>
-            <h5 className={styles.objectivesTitle}>Ziele:</h5>
+            <h5 className={styles.objectivesTitle}>Ziele</h5>
             {quest.objectives.map((obj) => (
               <ObjectiveRow key={obj.id} objective={obj} />
             ))}

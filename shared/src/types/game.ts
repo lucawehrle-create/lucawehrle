@@ -110,6 +110,7 @@ export interface GameEvent {
     | "level_up"
     | "npc_met"
     | "quest_start"
+    | "quest_progress"
     | "quest_complete"
     | "character_death";
   payload: Record<string, unknown>;

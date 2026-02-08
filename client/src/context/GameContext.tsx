@@ -16,7 +16,7 @@ import type {
 /** A notification about game events (items, XP, level-up, quests) */
 export interface GameNotification {
   id: string;
-  type: "item_acquired" | "item_lost" | "xp_gained" | "level_up" | "quest_complete" | "quest_start";
+  type: "item_acquired" | "item_lost" | "xp_gained" | "level_up" | "quest_complete" | "quest_start" | "quest_progress";
   text: string;
   subtext?: string;
   color?: string;
@@ -232,15 +232,23 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           case "combat_end":
             newCombatState = null;
             break;
-          case "quest_complete":
+          case "quest_complete": {
+            const rewards = p.rewards as { experience?: number; gold?: number } | undefined;
+            const rewardText = rewards
+              ? [
+                  rewards.experience ? `+${rewards.experience} XP` : null,
+                  rewards.gold ? `+${rewards.gold} Gold` : null,
+                ].filter(Boolean).join(", ")
+              : undefined;
             newNotifs.push({
               id: `${evt.turnId}_quest_complete_${ei}_${ts}`,
               type: "quest_complete",
               text: String(p.questTitle ?? "Quest"),
-              subtext: "Quest abgeschlossen!",
+              subtext: rewardText ? `Abgeschlossen! ${rewardText}` : "Quest abgeschlossen!",
               color: "#ffd43b",
             });
             break;
+          }
           case "quest_start":
             newNotifs.push({
               id: `${evt.turnId}_quest_start_${ei}_${ts}`,
@@ -250,6 +258,17 @@ function gameReducer(state: GameState, action: GameAction): GameState {
               color: "#339af0",
             });
             break;
+          case "quest_progress": {
+            const objective = p.objectiveDescription ?? p.objective;
+            newNotifs.push({
+              id: `${evt.turnId}_quest_progress_${ei}_${ts}`,
+              type: "quest_progress",
+              text: String(p.questTitle ?? "Quest"),
+              subtext: objective ? `Ziel: ${objective}` : "Fortschritt!",
+              color: "#51cf66",
+            });
+            break;
+          }
         }
       }
 

@@ -6,13 +6,16 @@ interface TypewriterProps {
   speed?: number; // ms per character
   onComplete?: () => void;
   className?: string;
+  /** Ref to the scroll container - if provided, will auto-scroll to keep cursor visible */
+  scrollContainerRef?: React.RefObject<HTMLElement>;
 }
 
-export function Typewriter({ text, speed = 18, onComplete, className }: TypewriterProps) {
+export function Typewriter({ text, speed = 18, onComplete, className, scrollContainerRef }: TypewriterProps) {
   const [displayedLength, setDisplayedLength] = useState(0);
   const [skipped, setSkipped] = useState(false);
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
+  const cursorRef = useRef<HTMLSpanElement>(null);
   // Stable ref for onComplete to avoid re-triggering the effect on every render
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
@@ -22,6 +25,22 @@ export function Typewriter({ text, speed = 18, onComplete, className }: Typewrit
     setSkipped(false);
     lastTimeRef.current = 0;
   }, [text]);
+
+  // Auto-scroll to keep cursor visible
+  useEffect(() => {
+    if (scrollContainerRef?.current && cursorRef.current) {
+      // Scroll the container so the cursor is visible at the bottom
+      const container = scrollContainerRef.current;
+      const cursor = cursorRef.current;
+      const cursorRect = cursor.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+
+      // If cursor is below the visible area, scroll down
+      if (cursorRect.bottom > containerRect.bottom - 40) {
+        container.scrollTop += cursorRect.bottom - containerRect.bottom + 60;
+      }
+    }
+  }, [displayedLength, scrollContainerRef]);
 
   useEffect(() => {
     if (skipped) {
@@ -70,7 +89,7 @@ export function Typewriter({ text, speed = 18, onComplete, className }: Typewrit
   return (
     <span className={`${className ?? ""} ${isTyping ? styles.typingArea : ""}`} onClick={handleClick}>
       {text.slice(0, displayedLength)}
-      {isTyping && <span className={styles.cursor}>|</span>}
+      {isTyping && <span ref={cursorRef} className={styles.cursor}>|</span>}
       {isTyping && <span className={styles.skipHint}>Klicken zum Ueberspringen</span>}
     </span>
   );

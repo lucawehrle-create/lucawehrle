@@ -46,6 +46,7 @@ export function GameView() {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [pressedOptionIdx, setPressedOptionIdx] = useState<number | null>(null);
   const narrativeEndRef = useRef<HTMLDivElement>(null);
+  const narrativeScrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   // Guard against duplicate submissions (e.g. rapid double-click before state update)
   const lastSubmitRef = useRef<string | null>(null);
@@ -310,7 +311,7 @@ export function GameView() {
 
         {/* Right: Narrative + optional sidebar */}
         <div className={styles.narrativeColumn}>
-          <div className={styles.narrativeScroll}>
+          <div ref={narrativeScrollRef} className={styles.narrativeScroll}>
             {/* Combat HUD */}
             {state.combatState && state.selectedCharacter && (
               <CombatHUD
@@ -334,6 +335,7 @@ export function GameView() {
                   <TurnDisplay
                     turn={turn}
                     isLatest={index === turns.length - 1}
+                    scrollContainerRef={narrativeScrollRef}
                   />
                 </React.Fragment>
               ))
@@ -583,9 +585,11 @@ function SceneImagePanel({
 function TurnDisplay({
   turn,
   isLatest,
+  scrollContainerRef,
 }: {
   turn: GameTurn;
   isLatest: boolean;
+  scrollContainerRef?: React.RefObject<HTMLDivElement>;
 }) {
   // Defensive: ensure narrative exists
   const narrative = turn.narrative ?? "";
@@ -622,7 +626,7 @@ function TurnDisplay({
       {narrative && (
         <div className={styles.narrative}>
           {isLatest ? (
-            <Typewriter text={narrative} speed={16} />
+            <Typewriter text={narrative} speed={16} scrollContainerRef={scrollContainerRef} />
           ) : (
             paragraphs.map((p, i) => <p key={i} className={styles.paragraph}>{p}</p>)
           )}

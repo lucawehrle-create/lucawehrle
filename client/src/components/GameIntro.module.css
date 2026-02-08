@@ -71,7 +71,6 @@
   max-width: 1200px;
   width: 90%;
   padding: 2rem;
-  padding-bottom: 140px; /* Space for action button */
   z-index: 5;
   overflow-y: auto;
   max-height: calc(100vh - 16vh); /* Account for cinematic bars */
@@ -82,7 +81,6 @@
     flex-direction: column;
     align-items: center;
     gap: 2rem;
-    padding-bottom: 160px;
   }
 }
 
@@ -377,23 +375,15 @@
   background: linear-gradient(180deg, rgba(10, 10, 18, 0.9) 0%, rgba(10, 10, 18, 0.7) 50%, rgba(10, 10, 18, 0.95) 100%);
 }
 
-/* Action section */
+/* Action section - now part of content flow */
 .actionSection {
-  position: fixed;
-  bottom: 10vh;
-  left: 0;
-  right: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1rem;
-  z-index: 20;
+  padding: 2rem 0;
+  margin-top: auto;
   transition: opacity 0.5s ease, transform 0.5s ease;
-  pointer-events: none;
-}
-
-.actionSection > * {
-  pointer-events: auto;
 }
 
 .beginButton {
@@ -500,17 +490,12 @@
     font-size: 0.9rem;
   }
 
-  .actionSection {
-    bottom: 8vh;
-  }
-
   .beginButton {
     padding: 0.85rem 2rem;
     font-size: 1.1rem;
   }
 
   .skipButton {
-    bottom: 8vh;
     right: 1rem;
   }
 }

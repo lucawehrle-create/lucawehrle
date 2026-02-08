@@ -224,6 +224,16 @@ export function GameIntro() {
               <p className={styles.scenarioDesc}>{scenario.description}</p>
             </div>
           )}
+
+          {/* Begin button - now inside story section */}
+          <div className={`${styles.actionSection} ${phase !== "ready" ? styles.hidden : ""}`}>
+            <button className={styles.beginButton} onClick={handleBeginAdventure}>
+              <span className={styles.beginIcon}>{"\u2694\uFE0F"}</span>
+              Abenteuer beginnen
+              <span className={styles.beginGlow} />
+            </button>
+            <p className={styles.hint}>Drücke Enter oder klicke um zu starten</p>
+          </div>
         </div>
       </div>
 
@@ -234,16 +244,6 @@ export function GameIntro() {
           <div className={styles.sceneGradient} />
         </div>
       )}
-
-      {/* Begin button */}
-      <div className={`${styles.actionSection} ${phase !== "ready" ? styles.hidden : ""}`}>
-        <button className={styles.beginButton} onClick={handleBeginAdventure}>
-          <span className={styles.beginIcon}>{"\u2694\uFE0F"}</span>
-          Abenteuer beginnen
-          <span className={styles.beginGlow} />
-        </button>
-        <p className={styles.hint}>Drücke Enter oder klicke um zu starten</p>
-      </div>
 
       {/* Skip hint */}
       {phase !== "ready" && (

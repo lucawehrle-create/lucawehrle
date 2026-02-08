@@ -15,6 +15,8 @@ import type {
   CreateScenarioRequest,
   EnergyCosts,
   ObjectScanResponse,
+  QuestLog,
+  Quest,
 } from "@aetheria/shared";
 
 const API_BASE = "/api";
@@ -137,8 +139,8 @@ export async function getScenarios(): Promise<ApiResponse<ScenarioTemplate[]>> {
 
 export async function createSession(
   data: CreateSessionRequest
-): Promise<ApiResponse<{ session: GameSession; turn: GameTurn; character?: Character; journeyNarrative?: string }>> {
-  return request<{ session: GameSession; turn: GameTurn; character?: Character; journeyNarrative?: string }>("/game/sessions", {
+): Promise<ApiResponse<{ session: GameSession; turn: GameTurn; character?: Character; journeyNarrative?: string; questLog?: QuestLog | null; initialQuest?: Quest | null }>> {
+  return request<{ session: GameSession; turn: GameTurn; character?: Character; journeyNarrative?: string; questLog?: QuestLog | null; initialQuest?: Quest | null }>("/game/sessions", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -155,8 +157,8 @@ export async function getSession(
 export async function submitAction(
   sessionId: string,
   action: SubmitActionRequest["action"]
-): Promise<ApiResponse<{ turn: GameTurn; events: GameEvent[]; inventory: Inventory; character: Character; xpGained: number }>> {
-  return request<{ turn: GameTurn; events: GameEvent[]; inventory: Inventory; character: Character; xpGained: number }>(
+): Promise<ApiResponse<{ turn: GameTurn; events: GameEvent[]; inventory: Inventory; character: Character; xpGained: number; questLog?: QuestLog | null }>> {
+  return request<{ turn: GameTurn; events: GameEvent[]; inventory: Inventory; character: Character; xpGained: number; questLog?: QuestLog | null }>(
     `/game/sessions/${sessionId}/action`,
     {
       method: "POST",

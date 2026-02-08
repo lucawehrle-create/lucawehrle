@@ -1,0 +1,243 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-surface);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+}
+
+.closeButton {
+  padding: var(--space-xs) var(--space-sm);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+
+.statsBar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: var(--space-sm) var(--space-lg);
+  background: rgba(51, 154, 240, 0.05);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statValue {
+  font-weight: 600;
+  color: #339af0;
+  font-size: 1rem;
+}
+
+.section {
+  padding: var(--space-md) var(--space-lg);
+}
+
+.sectionTitle {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.questList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  overflow-y: auto;
+}
+
+.emptyMessage {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  padding: var(--space-lg);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.questCard {
+  padding: var(--space-md);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  transition: background var(--transition-fast);
+  cursor: pointer;
+}
+
+.questCard:hover {
+  background: var(--color-surface);
+}
+
+.questCardExpanded {
+  background: var(--color-surface);
+  border-left-width: 4px;
+}
+
+.questCardCompleted {
+  opacity: 0.7;
+}
+
+.questHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.questTitle {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.questDifficulty {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.progressBar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+  margin-top: var(--space-xs);
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  position: absolute;
+  right: 0;
+  top: -16px;
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+}
+
+.questDescription {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin-top: var(--space-xs);
+}
+
+.objectives {
+  margin-top: var(--space-sm);
+}
+
+.objectivesTitle {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.objective {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  padding: var(--space-xs) 0;
+  font-size: 0.85rem;
+}
+
+.objectiveComplete {
+  opacity: 0.6;
+}
+
+.objectiveComplete .objectiveText {
+  text-decoration: line-through;
+}
+
+.objectiveCheck {
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.objectiveComplete .objectiveCheck {
+  color: #51cf66;
+}
+
+.objectiveText {
+  flex: 1;
+}
+
+.objectiveProgress {
+  color: var(--color-text-muted);
+  font-size: 0.8em;
+}
+
+.optionalBadge {
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-xs);
+}
+
+.rewards {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.8rem;
+}
+
+.rewardLabel {
+  color: var(--color-text-muted);
+}
+
+.rewardXP {
+  color: #51cf66;
+  font-weight: 600;
+}
+
+.rewardGold {
+  color: #ffd43b;
+  font-weight: 600;
+}

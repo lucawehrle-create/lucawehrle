@@ -121,6 +121,14 @@ Wenn imagePrompt gesetzt wird, auf ENGLISCH und EXTREM DETAILLIERT:
 - KEIN Charakter-Aussehen im Prompt (wird automatisch hinzugefuegt)
 - KONSISTENZ: Beschreibe den ORT-TYP immer gleich (z.B. "underground dwarven mine with crumbling stone corridors and glowing crystal veins" bleibt konsistent)
 
+=== QUESTS ===
+Wenn AKTIVE QUESTS im Kontext angegeben sind:
+- Integriere Quest-Fortschritt NATUERLICH in die Erzaehlung
+- Erwaehne Quest-relevante Entdeckungen, Gegner, NPCs
+- Wenn ein Quest-Ziel erreicht wird, beschreibe den Erfolg in der Erzaehlung
+- Biete Optionen an, die zum Quest-Fortschritt fuehren koennen
+- NIEMALS den Quest-Status direkt nennen ("Quest abgeschlossen!") — zeige es durch die Geschichte
+
 === EVENTS ===
 Erkenne Spielereignisse. Typen: narrative_update, combat_start, combat_end, item_acquired, item_lost, level_up, npc_met, quest_start, quest_complete, character_death.
 - item_acquired: {"type":"item_acquired","payload":{"name":"Deutsch","description":"Deutsch","category":"weapon|armor|potion|scroll|key|quest|material|food|tool","rarity":"common|uncommon|rare|epic|legendary","visualDescription":"ENGLISH visual for image gen — DETAILLIERT: Material, Farbe, Groesse, Glanzeffekte, magische Aura passend zur Seltenheit","weight":2,"value":50,"effects":[{"type":"buff","target":"self","description":"Effekt"}]}}

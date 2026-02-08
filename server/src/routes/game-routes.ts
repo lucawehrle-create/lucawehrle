@@ -20,6 +20,8 @@ import type {
   ItemCategory,
   ItemRarity,
   ItemEffect,
+  Quest,
+  QuestLog,
 } from "@aetheria/shared";
 import { LEVEL_THRESHOLDS } from "@aetheria/shared";
 import { buildCharacterAppearance, genreToImageStyle } from "../services/ai/prompts.js";
@@ -139,7 +141,7 @@ export function createGameRoutes(
 
       const inventory = store.getInventory(character.id)!;
 
-      const { session, firstTurn } = await dungeonMaster.startSession(character, scenario, inventory);
+      const { session, firstTurn, initialQuest } = await dungeonMaster.startSession(character, scenario, inventory);
 
       // Consume energy
       const updatedUser = energyService.consumeEnergy(user, "textGeneration");
@@ -172,10 +174,13 @@ export function createGameRoutes(
         journeyNarrative = fallbackNarrative;
       }
 
+      // Get quest log for response
+      const questLog = dungeonMaster.getQuestLog(session.id);
+
       // Send response IMMEDIATELY — no waiting for image generation
-      const response: ApiResponse<{ session: GameSession; turn: GameTurn; character: Character; journeyNarrative: string }> = {
+      const response: ApiResponse<{ session: GameSession; turn: GameTurn; character: Character; journeyNarrative: string; questLog: QuestLog | null; initialQuest: Quest | null }> = {
         success: true,
-        data: { session, turn: firstTurn, character, journeyNarrative },
+        data: { session, turn: firstTurn, character, journeyNarrative, questLog, initialQuest },
       };
       res.status(201).json(response);
 
@@ -465,10 +470,11 @@ export function createGameRoutes(
       }
 
       const updatedInventory = store.getInventory(character.id)!;
+      const questLog = dungeonMaster.getQuestLog(session.id);
 
-      const response: ApiResponse<{ turn: GameTurn; events: typeof result.events; inventory: Inventory; character: Character; xpGained: number }> = {
+      const response: ApiResponse<{ turn: GameTurn; events: typeof result.events; inventory: Inventory; character: Character; xpGained: number; questLog: QuestLog | null }> = {
         success: true,
-        data: { turn: result.turn, events: result.events, inventory: updatedInventory, character, xpGained },
+        data: { turn: result.turn, events: result.events, inventory: updatedInventory, character, xpGained, questLog },
       };
       res.json(response);
 

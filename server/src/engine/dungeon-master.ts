@@ -10,6 +10,9 @@ import type {
   ScenarioTemplate,
   ContextSummary,
   Inventory,
+  Quest,
+  QuestLog,
+  ObjectiveType,
 } from "@aetheria/shared";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -21,6 +24,7 @@ import {
 import type { AIService } from "../services/ai/ai-service.js";
 import type { MemoryService } from "../services/memory/memory-service.js";
 import type { SafetyService } from "../services/safety/safety-service.js";
+import { QuestManager } from "../services/quest/quest-manager.js";
 
 /**
  * The Dungeon Master orchestrates the game loop:
@@ -31,11 +35,33 @@ import type { SafetyService } from "../services/safety/safety-service.js";
  * 5. Returns the new turn
  */
 export class DungeonMaster {
+  private questManagers: Map<string, QuestManager> = new Map();
+
   constructor(
     private aiService: AIService,
     private memoryService: MemoryService,
     private safetyService: SafetyService
   ) {}
+
+  /**
+   * Get or create a QuestManager for a session.
+   */
+  getQuestManager(sessionId: string, existingLog?: QuestLog): QuestManager {
+    let manager = this.questManagers.get(sessionId);
+    if (!manager) {
+      manager = new QuestManager(sessionId, existingLog);
+      this.questManagers.set(sessionId, manager);
+    }
+    return manager;
+  }
+
+  /**
+   * Get the quest log for a session.
+   */
+  getQuestLog(sessionId: string): QuestLog | null {
+    const manager = this.questManagers.get(sessionId);
+    return manager?.getQuestLog() ?? null;
+  }
 
   /**
    * Starts a new game session with an opening narrative.
@@ -44,7 +70,7 @@ export class DungeonMaster {
     character: Character,
     scenario: ScenarioTemplate,
     inventory: Inventory
-  ): Promise<{ session: GameSession; firstTurn: GameTurn }> {
+  ): Promise<{ session: GameSession; firstTurn: GameTurn; initialQuest: Quest | null }> {
     const sessionId = uuidv4();
 
     const session: GameSession = {
@@ -63,16 +89,32 @@ export class DungeonMaster {
       updatedAt: new Date().toISOString(),
     };
 
+    // Initialize quest manager and generate initial quest
+    const questManager = this.getQuestManager(sessionId);
+    const initialQuest = questManager.generateQuest(
+      "exploration",
+      1,
+      scenario.openingNarrative
+    );
+    if (initialQuest) {
+      questManager.addQuest(initialQuest);
+      // Automatically start the initial quest
+      questManager.startQuest(initialQuest.id, 1);
+    }
+
     // Build the opening context
     const characterSummary = this.buildCharacterSummary(character);
     const inventoryContext = this.buildInventoryContext(inventory);
     const scenarioContext = this.buildScenarioContext(scenario);
+    const questContext = initialQuest
+      ? this.buildQuestContext(questManager)
+      : "";
 
     // Generate opening narrative
     const aiResponse = await this.aiService.generateText({
       sessionId,
       characterSummary,
-      recentContext: "",
+      recentContext: questContext,
       memoryContext: "",
       inventoryContext,
       playerAction: `[GAME START] ${scenario.openingNarrative}`,
@@ -124,7 +166,28 @@ export class DungeonMaster {
       timestamp: firstTurn.timestamp,
     });
 
-    return { session, firstTurn };
+    return { session, firstTurn, initialQuest };
+  }
+
+  /**
+   * Build quest context string for AI prompts.
+   */
+  private buildQuestContext(questManager: QuestManager): string {
+    const summary = questManager.getQuestSummary();
+    const activeQuests = questManager.getActiveQuests().filter((q) => q.status === "active");
+
+    if (activeQuests.length === 0) {
+      return "";
+    }
+
+    const questDetails = activeQuests.map((quest) => {
+      const objectiveList = quest.objectives
+        .map((obj) => `  - ${obj.description} (${obj.current}/${obj.required})${obj.completed ? " ✓" : ""}`)
+        .join("\n");
+      return `QUEST: "${quest.title}" [${quest.difficulty}]\n${quest.description}\nZiele:\n${objectiveList}`;
+    }).join("\n\n");
+
+    return `=== AKTIVE QUESTS ===\n${questDetails}\n\nHINWEIS: Integriere Quest-Fortschritt in die Erzaehlung wenn passend!`;
   }
 
   /**
@@ -213,12 +276,19 @@ export class DungeonMaster {
     // Build explicit action history from recent turns to prevent repetition
     const actionHistory = this.buildActionHistory(recentTurns);
 
-    // Combine context summary with action history
+    // Get quest context
+    const questManager = this.getQuestManager(session.id);
+    const questContext = this.buildQuestContext(questManager);
+
+    // Update quest progress based on action
+    const questUpdates = this.updateQuestProgress(questManager, action, previousTurn);
+
+    // Combine context summary with action history and quest context
     let recentContext: string;
     if (contextSummary) {
-      recentContext = `${contextSummary.overallSummary}\n\n${actionHistory}\n\nAktuelle Szene: ${contextSummary.recentEvents}`;
+      recentContext = `${contextSummary.overallSummary}\n\n${actionHistory}\n\n${questContext}\n\nAktuelle Szene: ${contextSummary.recentEvents}`;
     } else {
-      recentContext = `${actionHistory}\n\nAktuelle Szene: ${previousTurn.narrative.slice(0, 500)}`;
+      recentContext = `${actionHistory}\n\n${questContext}\n\nAktuelle Szene: ${previousTurn.narrative.slice(0, 500)}`;
     }
 
     // Build player action text with clear outcome directive
@@ -306,6 +376,56 @@ export class DungeonMaster {
       entities: [],
       timestamp: turn.timestamp,
     });
+
+    // Check for completed quests and add events
+    const completedQuests = questManager.checkCompletedQuests(turnNumber);
+    for (const quest of completedQuests) {
+      events.push({
+        type: "quest_complete",
+        payload: {
+          questId: quest.id,
+          questTitle: quest.title,
+          rewards: quest.rewards,
+        },
+        turnId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Add quest progress events
+    for (const update of questUpdates) {
+      if (update.objective.completed) {
+        events.push({
+          type: "narrative_update",
+          payload: {
+            message: `Quest-Ziel erreicht: ${update.objective.description}`,
+            questId: update.quest.id,
+            questTitle: update.quest.title,
+          },
+          turnId,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+
+    // Maybe generate a new quest if we completed one and have few active
+    const activeQuestCount = questManager.getActiveQuests().filter((q) => q.status === "active").length;
+    if (completedQuests.length > 0 && activeQuestCount < 2 && turnNumber > 3) {
+      const newQuest = questManager.generateQuest(newMood, turnNumber, narrative);
+      if (newQuest) {
+        questManager.addQuest(newQuest);
+        events.push({
+          type: "quest_start",
+          payload: {
+            questId: newQuest.id,
+            questTitle: newQuest.title,
+            questDescription: newQuest.description,
+          },
+          turnId,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
 
     // Update session
     const updatedSession: GameSession = {
@@ -574,5 +694,65 @@ WICHTIG: Die naechste Erzaehlung MUSS LOGISCH an dieser Position anknuepfen!`;
     if (mood === "combat" || mood === "danger") return "combat_event";
     if (mood === "exploration") return "location_discovery";
     return "player_decision";
+  }
+
+  /**
+   * Update quest progress based on player action and game state.
+   */
+  private updateQuestProgress(
+    questManager: QuestManager,
+    action: PlayerAction,
+    previousTurn: GameTurn
+  ): { quest: import("@aetheria/shared").Quest; objective: import("@aetheria/shared").QuestObjective }[] {
+    const updates: { quest: import("@aetheria/shared").Quest; objective: import("@aetheria/shared").QuestObjective }[] = [];
+    const actionText = action.text.toLowerCase();
+    const narrativeText = previousTurn.narrative.toLowerCase();
+
+    // Map action types to objective types
+    const actionTypeMapping: Record<string, ObjectiveType[]> = {
+      combat: ["defeat"],
+      exploration: ["explore", "investigate"],
+      social: ["talk"],
+      skill: ["collect", "investigate"],
+      magic: ["investigate"],
+      item: ["collect", "deliver"],
+    };
+
+    // Check for exploration progress
+    if (actionText.includes("erkund") || actionText.includes("untersuch") || actionText.includes("betret")) {
+      const exploreUpdates = questManager.updateProgress("explore", actionText, 1);
+      updates.push(...exploreUpdates);
+    }
+
+    // Check for combat progress
+    if (previousTurn.mood === "combat" || actionText.includes("angreif") || actionText.includes("kaempf")) {
+      // Look for enemy names in the narrative
+      const combatUpdates = questManager.updateProgress("defeat", narrativeText, 1);
+      updates.push(...combatUpdates);
+    }
+
+    // Check for dialogue progress
+    if (previousTurn.mood === "dialogue" || actionText.includes("sprech") || actionText.includes("red") || actionText.includes("frag")) {
+      const talkUpdates = questManager.updateProgress("talk", narrativeText, 1);
+      updates.push(...talkUpdates);
+    }
+
+    // Check for investigation progress
+    if (actionText.includes("untersuch") || actionText.includes("such") || actionText.includes("find")) {
+      const investigateUpdates = questManager.updateProgress("investigate", actionText, 1);
+      updates.push(...investigateUpdates);
+    }
+
+    // Check for collection progress (items in narrative)
+    if (narrativeText.includes("findest") || narrativeText.includes("nimmst") || narrativeText.includes("sammelst")) {
+      const collectUpdates = questManager.updateProgress("collect", narrativeText, 1);
+      updates.push(...collectUpdates);
+    }
+
+    // Check for survival progress (just being alive advances it)
+    const surviveUpdates = questManager.updateProgress("survive", "runde", 1);
+    updates.push(...surviveUpdates);
+
+    return updates;
   }
 }

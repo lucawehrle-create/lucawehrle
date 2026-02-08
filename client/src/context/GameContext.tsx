@@ -10,12 +10,13 @@ import type {
   GameEvent,
   DiceRoll,
   CombatantInfo,
+  QuestLog,
 } from "@aetheria/shared";
 
-/** A notification about game events (items, XP, level-up) */
+/** A notification about game events (items, XP, level-up, quests) */
 export interface GameNotification {
   id: string;
-  type: "item_acquired" | "item_lost" | "xp_gained" | "level_up";
+  type: "item_acquired" | "item_lost" | "xp_gained" | "level_up" | "quest_complete" | "quest_start";
   text: string;
   subtext?: string;
   color?: string;
@@ -43,6 +44,7 @@ export interface GameState {
   session: GameSession | null;
   turns: GameTurn[];
   inventory: Inventory | null;
+  questLog: QuestLog | null;
   notifications: GameNotification[];
   combatState: CombatantInfo | null;
   mood: SceneMood;
@@ -58,12 +60,13 @@ export type GameAction =
   | { type: "SET_CHARACTERS"; characters: Character[] }
   | { type: "SELECT_CHARACTER"; character: Character }
   | { type: "SET_SCENARIOS"; scenarios: ScenarioTemplate[] }
-  | { type: "START_SESSION"; session: GameSession; turn: GameTurn; character?: Character; journeyNarrative?: string }
+  | { type: "START_SESSION"; session: GameSession; turn: GameTurn; character?: Character; journeyNarrative?: string; questLog?: QuestLog | null }
   | { type: "ADD_TURN"; turn: GameTurn }
   | { type: "UPDATE_SESSION"; session: GameSession }
   | { type: "UPDATE_CHARACTER"; character: Character }
   | { type: "SET_INVENTORY"; inventory: Inventory }
-  | { type: "PROCESS_EVENTS"; events: GameEvent[]; inventory: Inventory; character: Character; xpGained: number; diceRolls: DiceRoll[] }
+  | { type: "SET_QUEST_LOG"; questLog: QuestLog | null }
+  | { type: "PROCESS_EVENTS"; events: GameEvent[]; inventory: Inventory; character: Character; xpGained: number; diceRolls: DiceRoll[]; questLog?: QuestLog | null }
   | { type: "DISMISS_NOTIFICATION"; id: string }
   | { type: "SET_MOOD"; mood: SceneMood }
   | { type: "SET_LOADING"; isLoading: boolean }
@@ -89,6 +92,7 @@ const initialState: GameState = {
   session: null,
   turns: [],
   inventory: null,
+  questLog: null,
   notifications: [],
   combatState: null,
   mood: "exploration",
@@ -163,6 +167,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         mood: action.turn.mood,
         selectedCharacter: action.character ?? state.selectedCharacter,
         journeyNarrative: action.journeyNarrative ?? null,
+        questLog: action.questLog ?? null,
         view: "game_intro",
       };
     case "ADD_TURN":
@@ -177,6 +182,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, selectedCharacter: action.character };
     case "SET_INVENTORY":
       return { ...state, inventory: action.inventory };
+    case "SET_QUEST_LOG":
+      return { ...state, questLog: action.questLog };
     case "PROCESS_EVENTS": {
       // Single-pass: process notifications, combat state, and damage together
       const newNotifs: GameNotification[] = [];
@@ -225,6 +232,24 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           case "combat_end":
             newCombatState = null;
             break;
+          case "quest_complete":
+            newNotifs.push({
+              id: `${evt.turnId}_quest_complete_${ei}_${ts}`,
+              type: "quest_complete",
+              text: String(p.questTitle ?? "Quest"),
+              subtext: "Quest abgeschlossen!",
+              color: "#ffd43b",
+            });
+            break;
+          case "quest_start":
+            newNotifs.push({
+              id: `${evt.turnId}_quest_start_${ei}_${ts}`,
+              type: "quest_start",
+              text: String(p.questTitle ?? "Neue Quest"),
+              subtext: "Neue Quest erhalten!",
+              color: "#339af0",
+            });
+            break;
         }
       }
 
@@ -262,6 +287,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         selectedCharacter: action.character,
         notifications: [...state.notifications, ...newNotifs],
         combatState: newCombatState,
+        questLog: action.questLog ?? state.questLog,
       };
     }
     case "DISMISS_NOTIFICATION":
@@ -286,6 +312,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         session: null,
         turns: [],
         inventory: null,
+        questLog: null,
         notifications: [],
         combatState: null,
         mood: "exploration",

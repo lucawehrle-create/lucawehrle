@@ -6,6 +6,7 @@ import { useSceneImage } from "../hooks/useImagePolling.js";
 import type { GameTurn, ActionOption } from "@aetheria/shared";
 import { DiceRollDisplay } from "./DiceRollDisplay.js";
 import { InventoryPanel } from "./InventoryPanel.js";
+import { QuestPanel } from "./QuestPanel.js";
 import { Typewriter } from "./Typewriter.js";
 import { AtmosphericEffects } from "./AtmosphericEffects.js";
 import { CharacterStatusBar } from "./CharacterStatusBar.js";
@@ -39,6 +40,7 @@ export function GameView() {
   const { state, dispatch } = useGame();
   const [freeText, setFreeText] = useState("");
   const [showInventory, setShowInventory] = useState(false);
+  const [showQuests, setShowQuests] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [pressedOptionIdx, setPressedOptionIdx] = useState<number | null>(null);
@@ -100,6 +102,14 @@ export function GameView() {
       if (e.key === "i" || e.key === "I") {
         e.preventDefault();
         setShowInventory((prev) => !prev);
+        setShowQuests(false);
+        return;
+      }
+
+      if (e.key === "q" || e.key === "Q") {
+        e.preventDefault();
+        setShowQuests((prev) => !prev);
+        setShowInventory(false);
         return;
       }
 
@@ -144,6 +154,7 @@ export function GameView() {
           character: result.data.character,
           xpGained: result.data.xpGained,
           diceRolls: result.data.turn.diceRolls,
+          questLog: result.data.questLog,
         });
       } else {
         // Handle explicit errors (including INSUFFICIENT_ENERGY) and invalid responses
@@ -192,6 +203,7 @@ export function GameView() {
           character: result.data.character,
           xpGained: result.data.xpGained,
           diceRolls: result.data.turn.diceRolls,
+          questLog: result.data.questLog,
         });
       } else {
         // Handle explicit errors (including INSUFFICIENT_ENERGY) and invalid responses
@@ -240,8 +252,20 @@ export function GameView() {
         </div>
         <div className={styles.headerActions}>
           <button
-            className={styles.iconButton}
-            onClick={() => setShowInventory(!showInventory)}
+            className={`${styles.iconButton} ${showQuests ? styles.iconButtonActive : ""}`}
+            onClick={() => { setShowQuests(!showQuests); setShowInventory(false); }}
+            title="Quests (Q)"
+          >
+            <span className={styles.btnIcon}>{"\u2B50"}</span> Quests
+            {state.questLog && state.questLog.activeQuests.filter(q => q.status === "active").length > 0 && (
+              <span className={styles.questBadge}>
+                {state.questLog.activeQuests.filter(q => q.status === "active").length}
+              </span>
+            )}
+          </button>
+          <button
+            className={`${styles.iconButton} ${showInventory ? styles.iconButtonActive : ""}`}
+            onClick={() => { setShowInventory(!showInventory); setShowQuests(false); }}
             title="Inventar (I)"
           >
             <span className={styles.btnIcon}>{"\uD83C\uDF92"}</span> Inventar
@@ -309,10 +333,15 @@ export function GameView() {
             <div ref={narrativeEndRef} />
           </div>
 
-          {/* Inventory sidebar */}
+          {/* Sidebar panels */}
           {showInventory && (
             <aside className={styles.sidebar}>
               <InventoryPanel onClose={() => setShowInventory(false)} />
+            </aside>
+          )}
+          {showQuests && (
+            <aside className={styles.sidebar}>
+              <QuestPanel onClose={() => setShowQuests(false)} />
             </aside>
           )}
         </div>
@@ -436,6 +465,8 @@ const NOTIF_ICONS: Record<GameNotification["type"], string> = {
   item_lost: "\uD83D\uDDD1\uFE0F",
   xp_gained: "\u2B50",
   level_up: "\uD83C\uDF89",
+  quest_complete: "\uD83C\uDFC6",
+  quest_start: "\uD83D\uDCDC",
 };
 
 function NotificationToast({

@@ -110,6 +110,7 @@ export function ScenarioSelect() {
         turn: result.data.turn,
         character: result.data.character,
         journeyNarrative: result.data.journeyNarrative,
+        questLog: result.data.questLog,
       });
     } else {
       dispatch({ type: "SET_ERROR", error: result.error?.message ?? "Sitzung konnte nicht gestartet werden" });

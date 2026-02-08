@@ -93,6 +93,22 @@
   background: rgba(196, 163, 90, 0.08);
 }
 
+.iconButtonActive {
+  border-color: var(--mood-primary);
+  color: var(--mood-primary);
+  background: var(--mood-glow);
+}
+
+.questBadge {
+  background: #339af0;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 8px;
+  margin-left: 2px;
+}
+
 .btnIcon {
   font-size: 0.9rem;
   line-height: 1;

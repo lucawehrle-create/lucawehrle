@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { v4 as uuidv4 } from "uuid";
-import type { GameStore } from "../store/game-store.js";
+import type { IGameStore } from "../store/index.js";
 import type { DungeonMaster } from "../engine/dungeon-master.js";
 import type { EnergyService } from "../services/energy/energy-service.js";
 import type { ScannerService } from "../services/scanner/scanner-service.js";
@@ -79,7 +79,7 @@ function checkAndApplyLevelUp(character: Character): number | null {
 }
 
 export function createGameRoutes(
-  store: GameStore,
+  store: IGameStore,
   dungeonMaster: DungeonMaster,
   energyService: EnergyService,
   scannerService: ScannerService,
@@ -91,7 +91,7 @@ export function createGameRoutes(
    * GET /api/game/scenarios
    * List all available scenarios.
    */
-  router.get("/scenarios", (_req: Request, res: Response) => {
+  router.get("/scenarios", async (_req: Request, res: Response) => {
     const scenarios = store.getAllScenarios();
     const response: ApiResponse<typeof scenarios> = { success: true, data: scenarios };
     res.json(response);
@@ -111,13 +111,13 @@ export function createGameRoutes(
         return;
       }
 
-      const user = store.getUser(userId);
+      const user = await store.getUser(userId);
       if (!user) {
         res.status(404).json({ success: false, error: { code: "USER_NOT_FOUND", message: "User not found" } });
         return;
       }
 
-      const character = store.getCharacter(body.characterId);
+      const character = await store.getCharacter(body.characterId);
       if (!character) {
         res.status(404).json({ success: false, error: { code: "CHARACTER_NOT_FOUND", message: "Character not found" } });
         return;
@@ -139,17 +139,21 @@ export function createGameRoutes(
         return;
       }
 
-      const inventory = store.getInventory(character.id)!;
+      const inventory = await store.getInventory(character.id);
+      if (!inventory) {
+        res.status(404).json({ success: false, error: { code: "INVENTORY_NOT_FOUND", message: "Inventory not found" } });
+        return;
+      }
 
       const { session, firstTurn, initialQuest } = await dungeonMaster.startSession(character, scenario, inventory);
 
       // Consume energy
       const updatedUser = energyService.consumeEnergy(user, "textGeneration");
-      store.updateUser(updatedUser);
+      await store.updateUser(updatedUser);
 
       // Store session and turn
-      store.createSession(session);
-      store.addTurn(firstTurn);
+      await store.createSession(session);
+      await store.addTurn(firstTurn);
 
       // Generate journey narrative (text-only, fast) — await with timeout + fallback
       const fallbackNarrative = `${character.name} hatte lange nach diesem Ort gesucht. "${scenario.title}" — nun stand das Abenteuer unmittelbar bevor.`;
@@ -197,10 +201,10 @@ export function createGameRoutes(
             character.traits,
             character.backstory,
           )
-          .then((portraitUrl) => {
+          .then(async (portraitUrl) => {
             if (portraitUrl) {
               character.portraitUrl = portraitUrl;
-              store.updateCharacter(character);
+              await store.updateCharacter(character);
               console.log(`[GameRoutes] Character portrait generated for ${character.name}`);
             }
           })
@@ -249,14 +253,14 @@ export function createGameRoutes(
    * GET /api/game/sessions/:sessionId
    * Get session details with recent turns.
    */
-  router.get("/sessions/:sessionId", (req: Request, res: Response) => {
-    const session = store.getSession(req.params.sessionId);
+  router.get("/sessions/:sessionId", async (req: Request, res: Response) => {
+    const session = await store.getSession(req.params.sessionId);
     if (!session) {
       res.status(404).json({ success: false, error: { code: "SESSION_NOT_FOUND", message: "Session not found" } });
       return;
     }
 
-    const turns = store.getTurns(session.id);
+    const turns = await store.getTurns(session.id);
     const response: ApiResponse<{ session: GameSession; turns: GameTurn[] }> = {
       success: true,
       data: { session, turns },
@@ -268,8 +272,8 @@ export function createGameRoutes(
    * GET /api/game/sessions/:sessionId/turns/:turnId/image
    * Poll for a turn's scene image (generated asynchronously).
    */
-  router.get("/sessions/:sessionId/turns/:turnId/image", (req: Request, res: Response) => {
-    const turn = store.getTurnById(req.params.sessionId, req.params.turnId);
+  router.get("/sessions/:sessionId/turns/:turnId/image", async (req: Request, res: Response) => {
+    const turn = await store.getTurnById(req.params.sessionId, req.params.turnId);
     if (!turn) {
       res.status(404).json({ success: false, error: { code: "TURN_NOT_FOUND", message: "Turn not found" } });
       return;
@@ -296,13 +300,13 @@ export function createGameRoutes(
         return;
       }
 
-      const user = store.getUser(userId);
+      const user = await store.getUser(userId);
       if (!user) {
         res.status(404).json({ success: false, error: { code: "USER_NOT_FOUND", message: "User not found" } });
         return;
       }
 
-      const session = store.getSession(req.params.sessionId);
+      const session = await store.getSession(req.params.sessionId);
       if (!session) {
         res.status(404).json({ success: false, error: { code: "SESSION_NOT_FOUND", message: "Session not found" } });
         return;
@@ -320,14 +324,18 @@ export function createGameRoutes(
         return;
       }
 
-      const character = store.getCharacter(session.characterId);
+      const character = await store.getCharacter(session.characterId);
       if (!character) {
         res.status(404).json({ success: false, error: { code: "CHARACTER_NOT_FOUND", message: "Character not found" } });
         return;
       }
 
-      const inventory = store.getInventory(character.id)!;
-      const allTurns = store.getTurns(session.id);
+      const inventory = await store.getInventory(character.id);
+      if (!inventory) {
+        res.status(404).json({ success: false, error: { code: "INVENTORY_NOT_FOUND", message: "Inventory not found" } });
+        return;
+      }
+      const allTurns = await store.getTurns(session.id);
       const previousTurn = allTurns[allTurns.length - 1];
       if (!previousTurn) {
         res.status(400).json({ success: false, error: { code: "NO_PREVIOUS_TURN", message: "No previous turn found" } });
@@ -354,11 +362,11 @@ export function createGameRoutes(
 
       // Consume energy
       const updatedUser = energyService.consumeEnergy(user, "textGeneration");
-      store.updateUser(updatedUser);
+      await store.updateUser(updatedUser);
 
       // Update session
-      store.updateSession(result.updatedSession);
-      store.addTurn(result.turn);
+      await store.updateSession(result.updatedSession);
+      await store.addTurn(result.turn);
 
       // Only generate a new scene image when the AI indicates a visual scene change
       const hasNewScene = result.turn.imagePrompt && result.turn.imagePrompt.trim().length > 0;
@@ -420,7 +428,7 @@ export function createGameRoutes(
             acquiredTurnId: result.turn.id,
           };
 
-          store.addItem(character.id, newItem);
+          await store.addItem(character.id, newItem);
 
           // Generate item image in background (fire-and-forget)
           // Pass rarity for quality-based visual effects
@@ -441,7 +449,7 @@ export function createGameRoutes(
           const p = event.payload as Record<string, unknown>;
           const itemName = String(p.name ?? "");
           if (itemName) {
-            store.removeItemByName(character.id, itemName);
+            await store.removeItemByName(character.id, itemName);
           }
         }
       }
@@ -451,7 +459,7 @@ export function createGameRoutes(
       const prevLevel = character.level;
       character.experience += xpGained;
       const newLevel = checkAndApplyLevelUp(character);
-      store.updateCharacter(character);
+      await store.updateCharacter(character);
 
       // If leveled up, inject a level_up event
       if (newLevel !== null) {
@@ -469,7 +477,7 @@ export function createGameRoutes(
         });
       }
 
-      const updatedInventory = store.getInventory(character.id)!;
+      const updatedInventory = (await store.getInventory(character.id))!;
       const questLog = dungeonMaster.getQuestLog(session.id);
 
       const response: ApiResponse<{ turn: GameTurn; events: typeof result.events; inventory: Inventory; character: Character; xpGained: number; questLog: QuestLog | null }> = {
@@ -529,7 +537,7 @@ export function createGameRoutes(
         return;
       }
 
-      const user = store.getUser(userId);
+      const user = await store.getUser(userId);
       if (!user) {
         res.status(404).json({ success: false, error: { code: "USER_NOT_FOUND", message: "User not found" } });
         return;
@@ -542,13 +550,13 @@ export function createGameRoutes(
         return;
       }
 
-      const session = store.getSession(req.params.sessionId);
+      const session = await store.getSession(req.params.sessionId);
       if (!session) {
         res.status(404).json({ success: false, error: { code: "SESSION_NOT_FOUND", message: "Session not found" } });
         return;
       }
 
-      const lastTurn = store.getLastTurn(session.id);
+      const lastTurn = await store.getLastTurn(session.id);
       const turnId = lastTurn?.id ?? "unknown";
 
       const { item, scanResponse } = await scannerService.scanObject(
@@ -558,7 +566,7 @@ export function createGameRoutes(
       );
 
       // Add to inventory
-      const added = store.addItem(session.characterId, item);
+      const added = await store.addItem(session.characterId, item);
       if (!added) {
         res.status(400).json({ success: false, error: { code: "INVENTORY_FULL", message: "Inventory is full" } });
         return;
@@ -566,7 +574,7 @@ export function createGameRoutes(
 
       // Consume energy
       const updatedUser = energyService.consumeEnergy(user, "objectScan");
-      store.updateUser(updatedUser);
+      await store.updateUser(updatedUser);
 
       const response: ApiResponse<{ item: typeof item; analysis: typeof scanResponse }> = {
         success: true,
@@ -585,8 +593,8 @@ export function createGameRoutes(
    * GET /api/game/inventory/:characterId
    * Get character's inventory.
    */
-  router.get("/inventory/:characterId", (req: Request, res: Response) => {
-    const inventory = store.getInventory(req.params.characterId);
+  router.get("/inventory/:characterId", async (req: Request, res: Response) => {
+    const inventory = await store.getInventory(req.params.characterId);
     if (!inventory) {
       res.status(404).json({ success: false, error: { code: "INVENTORY_NOT_FOUND", message: "Inventory not found" } });
       return;
@@ -600,26 +608,26 @@ export function createGameRoutes(
    * DELETE /api/game/inventory/:characterId/items/:itemId
    * Discard (drop) an item from inventory.
    */
-  router.delete("/inventory/:characterId/items/:itemId", (req: Request, res: Response) => {
+  router.delete("/inventory/:characterId/items/:itemId", async (req: Request, res: Response) => {
     const userId = req.headers["x-user-id"] as string;
     if (!userId) {
       res.status(401).json({ success: false, error: { code: "UNAUTHORIZED", message: "Missing user ID" } });
       return;
     }
 
-    const character = store.getCharacter(req.params.characterId);
+    const character = await store.getCharacter(req.params.characterId);
     if (!character || character.userId !== userId) {
       res.status(404).json({ success: false, error: { code: "CHARACTER_NOT_FOUND", message: "Character not found" } });
       return;
     }
 
-    const removed = store.removeItem(req.params.characterId, req.params.itemId);
+    const removed = await store.removeItem(req.params.characterId, req.params.itemId);
     if (!removed) {
       res.status(404).json({ success: false, error: { code: "ITEM_NOT_FOUND", message: "Item not found in inventory" } });
       return;
     }
 
-    const inventory = store.getInventory(req.params.characterId)!;
+    const inventory = (await store.getInventory(req.params.characterId))!;
     const response: ApiResponse<Inventory> = { success: true, data: inventory };
     res.json(response);
   });

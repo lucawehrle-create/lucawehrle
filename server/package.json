@@ -12,10 +12,13 @@
     "@aetheria/shared": "*",
     "@anthropic-ai/sdk": "^0.72.1",
     "@google/generative-ai": "^0.24.1",
+    "@prisma/client": "^5.22.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^4.18.0",
+    "express-rate-limit": "^8.2.1",
     "openai": "^6.17.0",
+    "prisma": "^5.22.0",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

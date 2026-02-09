@@ -1,0 +1,378 @@
+// Prisma schema for Aetheria AI RPG Platform
+// Using PostgreSQL as the database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// User & Authentication
+// ============================================
+
+model User {
+  id               String           @id @default(uuid())
+  username         String           @unique
+  email            String           @unique
+  passwordHash     String?          // For future auth implementation
+  subscriptionTier SubscriptionTier @default(FREE)
+
+  // Energy system
+  energyCurrent      Int      @default(50)
+  energyMax          Int      @default(100)
+  lastRechargeAt     DateTime @default(now())
+  dailyActionsUsed   Int      @default(0)
+  dailyActionsMax    Int      @default(10)
+
+  createdAt    DateTime @default(now())
+  lastActiveAt DateTime @default(now())
+
+  // Relations
+  characters Character[]
+  sessions   GameSession[]
+
+  @@map("users")
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+  CREATOR
+
+  @@map("subscription_tier")
+}
+
+// ============================================
+// Character
+// ============================================
+
+model Character {
+  id             String         @id @default(uuid())
+  userId         String
+  name           String
+  race           CharacterRace
+  characterClass CharacterClass
+  level          Int            @default(1)
+  experience     Int            @default(0)
+  hitPoints      Int
+  maxHitPoints   Int
+  armorClass     Int            @default(10)
+
+  // Complex objects stored as JSON
+  abilities  Json // AbilityScores
+  appearance Json // CharacterAppearance
+
+  portraitUrl String?
+  backstory   String   @default("")
+  traits      String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions  GameSession[]
+  inventory Inventory?
+
+  @@map("characters")
+}
+
+enum CharacterRace {
+  HUMAN
+  ELF
+  DWARF
+  HALFLING
+  ORC
+  TIEFLING
+  DRAGONBORN
+
+  @@map("character_race")
+}
+
+enum CharacterClass {
+  WARRIOR
+  MAGE
+  ROGUE
+  CLERIC
+  RANGER
+  BARD
+  PALADIN
+
+  @@map("character_class")
+}
+
+// ============================================
+// Inventory & Items
+// ============================================
+
+model Inventory {
+  id             String  @id @default(uuid())
+  characterId    String  @unique
+  gold           Int     @default(0)
+  maxSlots       Int     @default(20)
+  equippedWeapon String?
+  equippedArmor  String?
+
+  // Relations
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  items     Item[]
+
+  @@map("inventories")
+}
+
+model Item {
+  id                String       @id @default(uuid())
+  inventoryId       String
+  name              String
+  description       String
+  category          ItemCategory
+  rarity            ItemRarity   @default(COMMON)
+  visualDescription String       @default("")
+  imageUrl          String?
+
+  // Complex properties stored as JSON
+  properties Json // ItemProperties
+  scanData   Json? // ScannedObjectData (optional)
+
+  acquiredAt     DateTime @default(now())
+  acquiredTurnId String?
+
+  // Relations
+  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@map("items")
+}
+
+enum ItemCategory {
+  WEAPON
+  ARMOR
+  POTION
+  SCROLL
+  KEY
+  QUEST
+  MATERIAL
+  FOOD
+  TOOL
+  SCANNED_OBJECT
+
+  @@map("item_category")
+}
+
+enum ItemRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+  ARTIFACT
+
+  @@map("item_rarity")
+}
+
+// ============================================
+// Game Session & Turns
+// ============================================
+
+model GameSession {
+  id             String    @id @default(uuid())
+  userId         String
+  characterId    String
+  title          String
+  scenarioId     String
+  genre          GameGenre @default(FANTASY)
+  setting        String?
+  currentChapter Int       @default(1)
+  turnCount      Int       @default(0)
+  mood           SceneMood @default(EXPLORATION)
+  isActive       Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  character Character   @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  turns     GameTurn[]
+  questLog  QuestLog?
+  memories  Memory[]
+
+  @@map("game_sessions")
+}
+
+enum GameGenre {
+  FANTASY
+  HORROR
+  SCIFI
+  MYSTERY
+  COMEDY
+
+  @@map("game_genre")
+}
+
+enum SceneMood {
+  COMBAT
+  EXPLORATION
+  DIALOGUE
+  MYSTERY
+  SAFE
+  DANGER
+  CELEBRATION
+  SORROW
+
+  @@map("scene_mood")
+}
+
+model GameTurn {
+  id          String    @id @default(uuid())
+  sessionId   String
+  turnNumber  Int
+  narrative   String
+  mood        SceneMood @default(EXPLORATION)
+  imagePrompt String?
+  imageUrl    String?
+
+  // Complex objects stored as JSON
+  options      Json // ActionOption[]
+  playerAction Json? // PlayerAction
+  diceRolls    Json // DiceRoll[]
+
+  timestamp DateTime @default(now())
+
+  // Relations
+  session GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, turnNumber])
+  @@map("game_turns")
+}
+
+// ============================================
+// Quest System
+// ============================================
+
+model QuestLog {
+  id                        String @id @default(uuid())
+  sessionId                 String @unique
+  totalQuestsCompleted      Int    @default(0)
+  totalExperienceFromQuests Int    @default(0)
+  totalGoldFromQuests       Int    @default(0)
+
+  // Relations
+  session GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  quests  Quest[]
+
+  @@map("quest_logs")
+}
+
+model Quest {
+  id               String          @id @default(uuid())
+  questLogId       String
+  title            String
+  description      String
+  shortDescription String          @default("")
+  giver            String?
+  giverTitle       String?
+  location         String?
+  status           QuestStatus     @default(AVAILABLE)
+  priority         QuestPriority   @default(SIDE)
+  iconType         String          @default("star")
+  difficulty       QuestDifficulty @default(STANDARD)
+
+  // Complex objects stored as JSON
+  objectives Json     // QuestObjective[]
+  rewards    Json     // QuestReward
+  tags       String[] @default([])
+
+  turnStarted   Int?
+  turnCompleted Int?
+  timeLimit     Int?
+
+  // Relations
+  questLog QuestLog @relation(fields: [questLogId], references: [id], onDelete: Cascade)
+
+  @@map("quests")
+}
+
+enum QuestStatus {
+  AVAILABLE
+  ACTIVE
+  COMPLETED
+  FAILED
+
+  @@map("quest_status")
+}
+
+enum QuestPriority {
+  MAIN
+  SIDE
+
+  @@map("quest_priority")
+}
+
+enum QuestDifficulty {
+  SIMPLE
+  STANDARD
+  CHALLENGING
+  EPIC
+
+  @@map("quest_difficulty")
+}
+
+// ============================================
+// Memory System (for AI context)
+// ============================================
+
+model Memory {
+  id         String         @id @default(uuid())
+  sessionId  String
+  turnId     String
+  turnNumber Int
+  content    String
+  category   MemoryCategory @default(PLAYER_DECISION)
+  importance Float          @default(0.5)
+  entities   String[]       @default([])
+
+  timestamp DateTime @default(now())
+
+  // Relations
+  session GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, importance])
+  @@map("memories")
+}
+
+enum MemoryCategory {
+  COMBAT_EVENT
+  NPC_INTERACTION
+  LOCATION_DISCOVERY
+  ITEM_EVENT
+  QUEST_EVENT
+  PLAYER_DECISION
+  STORY_MILESTONE
+
+  @@map("memory_category")
+}
+
+// ============================================
+// Scenario Templates
+// ============================================
+
+model ScenarioTemplate {
+  id               String    @id @default(uuid())
+  title            String
+  description      String
+  genre            GameGenre @default(FANTASY)
+  difficulty       String    @default("medium")
+  openingNarrative String
+  setting          String
+  tags             String[]  @default([])
+  creatorId        String?
+  isPublic         Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@map("scenario_templates")
+}

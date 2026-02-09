@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { v4 as uuidv4 } from "uuid";
-import type { GameStore } from "../store/game-store.js";
+import type { IGameStore } from "../store/index.js";
 import type { EnergyService } from "../services/energy/energy-service.js";
 import type { AIService } from "../services/ai/ai-service.js";
 import type {
@@ -19,7 +19,7 @@ import {
 import type { CharacterRace, CharacterClass } from "@aetheria/shared";
 
 export function createUserRoutes(
-  store: GameStore,
+  store: IGameStore,
   energyService: EnergyService,
   aiService: AIService
 ): Router {
@@ -29,7 +29,7 @@ export function createUserRoutes(
    * POST /api/users
    * Register a new user.
    */
-  router.post("/", (req: Request, res: Response) => {
+  router.post("/", async (req: Request, res: Response) => {
     const { username, email } = req.body as { username: string; email: string };
 
     if (!username || !email) {
@@ -40,7 +40,7 @@ export function createUserRoutes(
       return;
     }
 
-    const user = store.createUser(username, email);
+    const user = await store.createUser(username, email);
     const response: ApiResponse<User> = { success: true, data: user };
     res.status(201).json(response);
   });
@@ -49,8 +49,8 @@ export function createUserRoutes(
    * GET /api/users/:userId
    * Get user profile and energy state.
    */
-  router.get("/:userId", (req: Request, res: Response) => {
-    const user = store.getUser(req.params.userId);
+  router.get("/:userId", async (req: Request, res: Response) => {
+    const user = await store.getUser(req.params.userId);
     if (!user) {
       res.status(404).json({ success: false, error: { code: "USER_NOT_FOUND", message: "User not found" } });
       return;
@@ -64,9 +64,9 @@ export function createUserRoutes(
    * POST /api/users/:userId/energy/purchase
    * Purchase an energy pack.
    */
-  router.post("/:userId/energy/purchase", (req: Request, res: Response) => {
+  router.post("/:userId/energy/purchase", async (req: Request, res: Response) => {
     const { energyAmount } = req.body as { energyAmount: number };
-    const user = store.getUser(req.params.userId);
+    const user = await store.getUser(req.params.userId);
 
     if (!user) {
       res.status(404).json({ success: false, error: { code: "USER_NOT_FOUND", message: "User not found" } });
@@ -82,7 +82,7 @@ export function createUserRoutes(
     }
 
     const updatedUser = energyService.addPurchasedEnergy(user, energyAmount);
-    store.updateUser(updatedUser);
+    await store.updateUser(updatedUser);
 
     const response: ApiResponse<User> = { success: true, data: updatedUser };
     res.json(response);
@@ -92,8 +92,8 @@ export function createUserRoutes(
    * GET /api/users/:userId/energy/costs
    * Get energy costs for the user's subscription tier.
    */
-  router.get("/:userId/energy/costs", (req: Request, res: Response) => {
-    const user = store.getUser(req.params.userId);
+  router.get("/:userId/energy/costs", async (req: Request, res: Response) => {
+    const user = await store.getUser(req.params.userId);
     if (!user) {
       res.status(404).json({ success: false, error: { code: "USER_NOT_FOUND", message: "User not found" } });
       return;
@@ -108,11 +108,11 @@ export function createUserRoutes(
    * POST /api/users/:userId/characters
    * Create a new character.
    */
-  router.post("/:userId/characters", (req: Request, res: Response) => {
+  router.post("/:userId/characters", async (req: Request, res: Response) => {
     const body = req.body as CreateCharacterRequest;
     const userId = req.params.userId;
 
-    const user = store.getUser(userId);
+    const user = await store.getUser(userId);
     if (!user) {
       res.status(404).json({ success: false, error: { code: "USER_NOT_FOUND", message: "User not found" } });
       return;
@@ -156,7 +156,7 @@ export function createUserRoutes(
       updatedAt: new Date().toISOString(),
     };
 
-    store.createCharacter(character);
+    await store.createCharacter(character);
 
     // Generate character portrait asynchronously
     const appearanceDesc = [
@@ -170,10 +170,10 @@ export function createUserRoutes(
 
     aiService
       .generatePortrait(appearanceDesc, character.race, character.characterClass)
-      .then((portraitUrl) => {
+      .then(async (portraitUrl) => {
         if (portraitUrl) {
           character.portraitUrl = portraitUrl;
-          store.updateCharacter(character);
+          await store.updateCharacter(character);
         }
       })
       .catch(() => {
@@ -188,8 +188,8 @@ export function createUserRoutes(
    * GET /api/users/:userId/characters
    * List user's characters.
    */
-  router.get("/:userId/characters", (req: Request, res: Response) => {
-    const characters = store.getCharactersByUser(req.params.userId);
+  router.get("/:userId/characters", async (req: Request, res: Response) => {
+    const characters = await store.getCharactersByUser(req.params.userId);
     const response: ApiResponse<Character[]> = { success: true, data: characters };
     res.json(response);
   });

@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { loadConfig } from "./config.js";
-import { GameStore } from "./store/game-store.js";
+import { initializeStore, getStore, getStoreType } from "./store/index.js";
 import { DungeonMaster } from "./engine/dungeon-master.js";
 import { MockAIService } from "./services/ai/ai-service.js";
 import { LiveAIService } from "./services/ai/live-ai-service.js";
@@ -15,15 +16,69 @@ import { createGameRoutes } from "./routes/game-routes.js";
 import { createUserRoutes } from "./routes/user-routes.js";
 import { createScenarioRoutes } from "./routes/scenario-routes.js";
 
-export function createApp() {
+// ============================================
+// Rate Limiting Configuration
+// ============================================
+
+/** General API rate limit: 100 requests per minute per IP */
+const generalLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100,
+  message: { error: "Zu viele Anfragen. Bitte warte einen Moment." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/** AI-intensive endpoints: 20 requests per minute per IP */
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 20,
+  message: { error: "Zu viele KI-Anfragen. Bitte warte einen Moment." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/** Auth endpoints: 10 requests per minute per IP (prevent brute force) */
+const authLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  message: { error: "Zu viele Login-Versuche. Bitte warte einen Moment." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ============================================
+// App Factory
+// ============================================
+
+export async function createApp() {
   const config = loadConfig();
   const app = express();
 
-  // Middleware
-  app.use(cors());
+  // Initialize store (database or in-memory)
+  await initializeStore();
+
+  // ---- Security Middleware ----
+
+  // CORS - restrict in production
+  const corsOrigins = process.env.CORS_ORIGINS?.split(",") ?? ["http://localhost:5173", "http://localhost:4173"];
+  app.use(cors({
+    origin: process.env.NODE_ENV === "production" ? corsOrigins : true,
+    credentials: true,
+  }));
+
+  // JSON body parser with size limit
   app.use(express.json({ limit: "10mb" })); // Large limit for base64 image scans
 
-  // Initialize AI service based on configured provider
+  // Apply general rate limiter to all routes
+  app.use(generalLimiter);
+
+  // Trust proxy (needed for rate limiting behind reverse proxy)
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
+  // ---- AI Service Initialization ----
   let aiService: AIService;
 
   switch (config.aiProvider) {
@@ -56,26 +111,37 @@ export function createApp() {
     console.log("[Aetheria AI] Hinweis: Kein OPENAI_API_KEY – Bilder werden als Platzhalter angezeigt");
   }
 
-  // Initialize other services
-  const store = new GameStore();
+  // ---- Other Services ----
+  const store = getStore();
   const memoryService = new InMemoryMemoryService();
   const safetyService = new ContentSafetyService();
   const energyService = new FreemiumEnergyService();
   const scannerService = new ObjectScannerService(aiService);
   const dungeonMaster = new DungeonMaster(aiService, memoryService, safetyService);
 
-  // Routes
+  // ---- Routes with Rate Limiting ----
+
+  // Auth routes with stricter limiting
+  app.use("/api/users/register", authLimiter);
+  app.use("/api/users/login", authLimiter);
+
+  // AI-intensive routes with AI limiting
+  app.use("/api/game/sessions/:sessionId/action", aiLimiter);
+  app.use("/api/game/scan", aiLimiter);
+
+  // Main routes
   app.use("/api/game", createGameRoutes(store, dungeonMaster, energyService, scannerService, aiService));
   app.use("/api/users", createUserRoutes(store, energyService, aiService));
   app.use("/api/scenarios", createScenarioRoutes(store, energyService));
 
-  // Health check
+  // ---- Health Check ----
   app.get("/api/health", (_req, res) => {
     res.json({
       status: "ok",
       service: "Aetheria AI",
       version: "1.0.0",
       aiProvider: config.aiProvider,
+      storeType: getStoreType(),
       imageGeneration: config.aiProvider === "gemini" ? "gemini" : config.aiProvider === "anthropic" && !!config.openaiApiKey ? "dall-e-3" : "placeholder",
       timestamp: new Date().toISOString(),
     });

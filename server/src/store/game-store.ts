@@ -8,12 +8,14 @@ import type {
   Item,
 } from "@aetheria/shared";
 import { v4 as uuidv4 } from "uuid";
+import type { IGameStore } from "./store-interface.js";
 
 /**
  * In-memory data store for game state.
- * In production, this would be backed by a database (PostgreSQL, MongoDB, etc.).
+ * Implements IGameStore interface with async methods for compatibility
+ * with DatabaseStore.
  */
-export class GameStore {
+export class GameStore implements IGameStore {
   private users = new Map<string, User>();
   private characters = new Map<string, Character>();
   private sessions = new Map<string, GameSession>();
@@ -25,13 +27,19 @@ export class GameStore {
     this.seedDefaultScenarios();
   }
 
+  // --- Initialization ---
+
+  async initialize(): Promise<void> {
+    // No-op for in-memory store
+  }
+
   // --- Users ---
 
-  getUser(id: string): User | undefined {
+  async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
   }
 
-  createUser(username: string, email: string): User {
+  async createUser(username: string, email: string): Promise<User> {
     // Default to premium tier for unlimited actions during development
     // Change to "free" for production with monetization
     const user: User = {
@@ -53,21 +61,21 @@ export class GameStore {
     return user;
   }
 
-  updateUser(user: User): void {
+  async updateUser(user: User): Promise<void> {
     this.users.set(user.id, user);
   }
 
   // --- Characters ---
 
-  getCharacter(id: string): Character | undefined {
+  async getCharacter(id: string): Promise<Character | undefined> {
     return this.characters.get(id);
   }
 
-  getCharactersByUser(userId: string): Character[] {
+  async getCharactersByUser(userId: string): Promise<Character[]> {
     return Array.from(this.characters.values()).filter((c) => c.userId === userId);
   }
 
-  createCharacter(character: Character): void {
+  async createCharacter(character: Character): Promise<void> {
     this.characters.set(character.id, character);
     // Create initial inventory
     this.inventories.set(character.id, {
@@ -78,46 +86,46 @@ export class GameStore {
     });
   }
 
-  updateCharacter(character: Character): void {
+  async updateCharacter(character: Character): Promise<void> {
     this.characters.set(character.id, character);
   }
 
   // --- Sessions ---
 
-  getSession(id: string): GameSession | undefined {
+  async getSession(id: string): Promise<GameSession | undefined> {
     return this.sessions.get(id);
   }
 
-  getSessionsByUser(userId: string): GameSession[] {
+  async getSessionsByUser(userId: string): Promise<GameSession[]> {
     return Array.from(this.sessions.values()).filter((s) => s.userId === userId);
   }
 
-  createSession(session: GameSession): void {
+  async createSession(session: GameSession): Promise<void> {
     this.sessions.set(session.id, session);
     this.turns.set(session.id, []);
   }
 
-  updateSession(session: GameSession): void {
+  async updateSession(session: GameSession): Promise<void> {
     this.sessions.set(session.id, session);
   }
 
   // --- Turns ---
 
-  getTurns(sessionId: string): GameTurn[] {
+  async getTurns(sessionId: string): Promise<GameTurn[]> {
     return this.turns.get(sessionId) ?? [];
   }
 
-  getLastTurn(sessionId: string): GameTurn | undefined {
+  async getLastTurn(sessionId: string): Promise<GameTurn | undefined> {
     const sessionTurns = this.turns.get(sessionId) ?? [];
     return sessionTurns[sessionTurns.length - 1];
   }
 
-  getTurnById(sessionId: string, turnId: string): GameTurn | undefined {
+  async getTurnById(sessionId: string, turnId: string): Promise<GameTurn | undefined> {
     const sessionTurns = this.turns.get(sessionId) ?? [];
     return sessionTurns.find((t) => t.id === turnId);
   }
 
-  addTurn(turn: GameTurn): void {
+  async addTurn(turn: GameTurn): Promise<void> {
     const sessionTurns = this.turns.get(turn.sessionId) ?? [];
     sessionTurns.push(turn);
     this.turns.set(turn.sessionId, sessionTurns);
@@ -125,11 +133,11 @@ export class GameStore {
 
   // --- Inventory ---
 
-  getInventory(characterId: string): Inventory | undefined {
+  async getInventory(characterId: string): Promise<Inventory | undefined> {
     return this.inventories.get(characterId);
   }
 
-  addItem(characterId: string, item: Item): boolean {
+  async addItem(characterId: string, item: Item): Promise<boolean> {
     const inventory = this.inventories.get(characterId);
     if (!inventory) return false;
     if (inventory.items.length >= inventory.maxSlots) return false;
@@ -139,7 +147,7 @@ export class GameStore {
     return true;
   }
 
-  removeItem(characterId: string, itemId: string): boolean {
+  async removeItem(characterId: string, itemId: string): Promise<boolean> {
     const inventory = this.inventories.get(characterId);
     if (!inventory) return false;
 
@@ -151,7 +159,7 @@ export class GameStore {
     return true;
   }
 
-  removeItemByName(characterId: string, itemName: string): boolean {
+  async removeItemByName(characterId: string, itemName: string): Promise<boolean> {
     const inventory = this.inventories.get(characterId);
     if (!inventory) return false;
 
@@ -175,7 +183,7 @@ export class GameStore {
     return Array.from(this.scenarios.values());
   }
 
-  createScenario(scenario: ScenarioTemplate): void {
+  async createScenario(scenario: ScenarioTemplate): Promise<void> {
     this.scenarios.set(scenario.id, scenario);
   }
 

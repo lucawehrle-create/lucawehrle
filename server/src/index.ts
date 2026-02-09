@@ -15,10 +15,33 @@ if (example.parsed) {
 }
 
 import { createApp } from "./app.js";
+import { disconnectPrisma } from "./db/prisma.js";
 
-const { app, config } = createApp();
+async function main() {
+  try {
+    const { app, config } = await createApp();
 
-app.listen(config.port, () => {
-  console.log(`[Aetheria AI] Server laeuft auf http://localhost:${config.port}`);
-  console.log(`[Aetheria AI] Health: http://localhost:${config.port}/api/health`);
-});
+    const server = app.listen(config.port, () => {
+      console.log(`[Aetheria AI] Server laeuft auf http://localhost:${config.port}`);
+      console.log(`[Aetheria AI] Health: http://localhost:${config.port}/api/health`);
+    });
+
+    // Graceful shutdown
+    const shutdown = async () => {
+      console.log("\n[Aetheria AI] Server wird beendet...");
+      server.close(async () => {
+        await disconnectPrisma();
+        console.log("[Aetheria AI] Auf Wiedersehen!");
+        process.exit(0);
+      });
+    };
+
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
+  } catch (error) {
+    console.error("[Aetheria AI] Fehler beim Starten:", error);
+    process.exit(1);
+  }
+}
+
+main();

@@ -38,17 +38,61 @@ export interface MemoryQuery {
   minImportance?: number;
 }
 
+/** NPC relationship tracking with numeric score */
+export interface NPCRelationship {
+  name: string;
+  /** First description when NPC was encountered */
+  description: string;
+  /** Relationship score: -10 (hostile) to +10 (loyal), 0 = neutral */
+  relationshipScore: number;
+  /** Human-readable relationship status */
+  relationshipLabel: "hostile" | "unfriendly" | "neutral" | "friendly" | "loyal";
+  /** Turn when first encountered */
+  firstMetTurn: number;
+  /** Turn of last interaction */
+  lastInteractionTurn: number;
+  /** Key interactions that shaped the relationship */
+  keyInteractions: string[];
+}
+
+/** Location with visit history */
+export interface KnownLocation {
+  name: string;
+  description: string;
+  firstVisitTurn: number;
+  lastVisitTurn: number;
+  visitCount: number;
+  /** Notable events that happened here */
+  notableEvents: string[];
+}
+
+/** A significant story moment worth referencing later */
+export interface StoryMilestone {
+  id: string;
+  turnNumber: number;
+  /** Brief description of what happened */
+  description: string;
+  /** Why this is significant */
+  significance: "player_choice" | "npc_death" | "major_discovery" | "betrayal" | "alliance" | "quest_complete" | "near_death";
+  /** Entities involved */
+  involvedEntities: string[];
+  /** Potential future callbacks */
+  callbackHints: string[];
+}
+
 /** Context window summary for efficient token usage */
 export interface ContextSummary {
   sessionId: string;
   /** Compressed summary of all past events */
   overallSummary: string;
-  /** Key NPCs encountered with brief descriptions */
-  knownNPCs: Array<{ name: string; description: string; relationship: string }>;
+  /** Key NPCs encountered with relationship tracking */
+  knownNPCs: NPCRelationship[];
   /** Key locations visited */
-  knownLocations: Array<{ name: string; description: string; firstVisitTurn: number }>;
+  knownLocations: KnownLocation[];
   /** Active quests and objectives */
   activeQuests: Array<{ name: string; description: string; status: string }>;
+  /** Significant story moments for callbacks */
+  storyMilestones: StoryMilestone[];
   /** Recent events (last N turns, full detail) */
   recentEvents: string;
   /** Total turns summarized */

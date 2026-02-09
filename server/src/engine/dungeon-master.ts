@@ -13,6 +13,8 @@ import type {
   Quest,
   QuestLog,
   ObjectiveType,
+  NPCRelationship,
+  StoryMilestone,
 } from "@aetheria/shared";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -191,6 +193,66 @@ export class DungeonMaster {
   }
 
   /**
+   * Build story context with NPC relationships, locations, and milestones.
+   * This enables deeper storytelling with callbacks to past events.
+   */
+  private buildStoryContext(sessionId: string): string {
+    const npcs = this.memoryService.getSessionNPCs(sessionId);
+    const locations = this.memoryService.getSessionLocations(sessionId);
+    const milestones = this.memoryService.getSessionMilestones(sessionId);
+
+    const sections: string[] = [];
+
+    // NPC Relationships section
+    if (npcs.length > 0) {
+      const npcLines = npcs
+        .sort((a, b) => Math.abs(b.relationshipScore) - Math.abs(a.relationshipScore))
+        .slice(0, 5) // Top 5 most significant relationships
+        .map((npc) => {
+          const scoreIndicator = npc.relationshipScore > 0 ? "+" : "";
+          const lastInteraction = npc.keyInteractions.length > 0
+            ? ` | Letzte Begegnung: ${npc.keyInteractions[npc.keyInteractions.length - 1]}`
+            : "";
+          return `  - ${npc.name} [${npc.relationshipLabel.toUpperCase()} ${scoreIndicator}${npc.relationshipScore}]${lastInteraction}`;
+        });
+
+      sections.push(`=== BEKANNTE NPCS (Beziehungen beachten!) ===\n${npcLines.join("\n")}`);
+    }
+
+    // Known Locations section
+    if (locations.length > 0) {
+      const locationLines = locations
+        .sort((a, b) => b.lastVisitTurn - a.lastVisitTurn)
+        .slice(0, 5)
+        .map((loc) => {
+          const visits = loc.visitCount > 1 ? ` (${loc.visitCount}x besucht)` : "";
+          const events = loc.notableEvents.length > 0
+            ? ` | ${loc.notableEvents[loc.notableEvents.length - 1]}`
+            : "";
+          return `  - ${loc.name}${visits}${events}`;
+        });
+
+      sections.push(`=== BEKANNTE ORTE ===\n${locationLines.join("\n")}`);
+    }
+
+    // Story Milestones for callbacks
+    if (milestones.length > 0) {
+      const milestoneLines = milestones
+        .slice(-3) // Last 3 milestones
+        .map((m) => {
+          const hint = m.callbackHints.length > 0 ? m.callbackHints[0] : "";
+          return `  - [Runde ${m.turnNumber}] ${m.description.slice(0, 80)}...\n    CALLBACK-HINWEIS: ${hint}`;
+        });
+
+      sections.push(
+        `=== WICHTIGE STORY-MOMENTE (Referenziere wenn passend!) ===\n${milestoneLines.join("\n")}\n\nHINWEIS: Wenn thematisch passend, nimm Bezug auf diese Ereignisse! NPCs koennten sie erwaehnen, Konsequenzen koennten sichtbar werden.`
+      );
+    }
+
+    return sections.length > 0 ? sections.join("\n\n") : "";
+  }
+
+  /**
    * Processes a player action and generates the next turn.
    */
   async processAction(
@@ -280,15 +342,18 @@ export class DungeonMaster {
     const questManager = this.getQuestManager(session.id);
     const questContext = this.buildQuestContext(questManager);
 
+    // Get story context (NPCs, locations, milestones)
+    const storyContext = this.buildStoryContext(session.id);
+
     // Update quest progress based on action
     const questUpdates = this.updateQuestProgress(questManager, action, previousTurn);
 
-    // Combine context summary with action history and quest context
+    // Combine context summary with action history, quest context, and story context
     let recentContext: string;
     if (contextSummary) {
-      recentContext = `${contextSummary.overallSummary}\n\n${actionHistory}\n\n${questContext}\n\nAktuelle Szene: ${contextSummary.recentEvents}`;
+      recentContext = `${contextSummary.overallSummary}\n\n${storyContext}\n\n${actionHistory}\n\n${questContext}\n\nAktuelle Szene: ${contextSummary.recentEvents}`;
     } else {
-      recentContext = `${actionHistory}\n\n${questContext}\n\nAktuelle Szene: ${previousTurn.narrative.slice(0, 500)}`;
+      recentContext = `${storyContext}\n\n${actionHistory}\n\n${questContext}\n\nAktuelle Szene: ${previousTurn.narrative.slice(0, 500)}`;
     }
 
     // Build player action text with clear outcome directive
@@ -363,7 +428,55 @@ export class DungeonMaster {
       timestamp: new Date().toISOString(),
     };
 
-    // Store turn in memory
+    // Extract entities from narrative for tracking
+    const extractedEntities = this.memoryService.extractEntitiesFromText(narrative);
+
+    // Update NPC relationships based on narrative content
+    for (const entityName of extractedEntities) {
+      // Check if this looks like an NPC (appears in dialogue/action context)
+      if (this.looksLikeNPC(narrative, entityName)) {
+        this.memoryService.updateNPCRelationship(
+          session.id,
+          entityName,
+          narrative,
+          turnNumber
+        );
+      }
+      // Check if this looks like a location
+      if (this.looksLikeLocation(narrative, entityName)) {
+        const notableEvent = events.length > 0 ? events[0].type : undefined;
+        this.memoryService.updateLocationVisit(
+          session.id,
+          entityName,
+          turnNumber,
+          undefined,
+          notableEvent
+        );
+      }
+    }
+
+    // Check for story milestones
+    const milestone = this.memoryService.checkForMilestone(
+      session.id,
+      narrative,
+      turnNumber,
+      extractedEntities
+    );
+
+    if (milestone) {
+      events.push({
+        type: "narrative_update",
+        payload: {
+          milestone: true,
+          milestoneType: milestone.significance,
+          description: milestone.description,
+        },
+        turnId,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Store turn in memory with extracted entities
     const importance = this.calculateImportance(events, diceRolls);
     await this.memoryService.storeMemory({
       id: uuidv4(),
@@ -373,7 +486,7 @@ export class DungeonMaster {
       content: `Player: ${action.text}\n${mechanicsContext}\nResult: ${narrative}`,
       category: this.categorizeEvent(events, newMood),
       importance,
-      entities: [],
+      entities: extractedEntities,
       timestamp: turn.timestamp,
     });
 
@@ -697,6 +810,52 @@ WICHTIG: Die naechste Erzaehlung MUSS LOGISCH an dieser Position anknuepfen!`;
     if (mood === "combat" || mood === "danger") return "combat_event";
     if (mood === "exploration") return "location_discovery";
     return "player_decision";
+  }
+
+  /**
+   * Check if an entity name looks like an NPC based on narrative context.
+   */
+  private looksLikeNPC(narrative: string, name: string): boolean {
+    const lowerNarrative = narrative.toLowerCase();
+    const lowerName = name.toLowerCase();
+
+    // NPC indicators: speaking, actions, emotions
+    const npcPatterns = [
+      new RegExp(`${lowerName}\\s+(?:sagt|fragt|antwortet|ruft|flüstert|erklärt|warnt|nickt|lächelt|schaut|blickt)`, "i"),
+      new RegExp(`(?:der|die)\\s+${lowerName}\\s+(?:ist|hat|wird|kann|steht|sitzt)`, "i"),
+      new RegExp(`"[^"]*"[,.]?\\s*(?:sagt|fragt|ruft)?\\s*${lowerName}`, "i"),
+      new RegExp(`${lowerName}(?:'s|s)\\s+(?:augen|stimme|hand|gesicht|blick)`, "i"),
+    ];
+
+    return npcPatterns.some((pattern) => pattern.test(narrative));
+  }
+
+  /**
+   * Check if an entity name looks like a location based on narrative context.
+   */
+  private looksLikeLocation(narrative: string, name: string): boolean {
+    const lowerName = name.toLowerCase();
+
+    // Location suffixes
+    const locationSuffixes = [
+      "wald", "berg", "tal", "turm", "burg", "höhle", "tempel", "dorf", "stadt",
+      "halle", "kammer", "raum", "haus", "hütte", "tor", "brücke", "see", "fluss",
+      "weg", "pfad", "gasse", "platz", "markt", "taverne", "schenke", "mine",
+      "gruft", "krypta", "ruine", "palast", "schloss", "festung", "hafen",
+    ];
+
+    if (locationSuffixes.some((suffix) => lowerName.endsWith(suffix))) {
+      return true;
+    }
+
+    // Location context patterns
+    const locationPatterns = [
+      new RegExp(`(?:in|im|ins|nach|zum|zur|am|beim|durch)\\s+(?:den?|die|das|dem|der)?\\s*${lowerName}`, "i"),
+      new RegExp(`(?:betritt|betrittst|verlässt|erreichst)\\s+(?:den?|die|das)?\\s*${lowerName}`, "i"),
+      new RegExp(`${lowerName}\\s+(?:liegt|befindet|erstreckt|erhebt)`, "i"),
+    ];
+
+    return locationPatterns.some((pattern) => pattern.test(narrative));
   }
 
   /**

@@ -389,9 +389,12 @@ export class DungeonMaster {
       contentType: "text",
     });
 
-    const narrative = safetyResult.safe
+    // Deduplicate: Remove repeated content from previous turn
+    let narrative = safetyResult.safe
       ? aiResponse.narrative
       : safetyResult.filteredContent ?? "The adventure continues...";
+
+    narrative = this.deduplicateNarrative(narrative, previousTurn.narrative);
 
     // Build action options
     const options: ActionOption[] = aiResponse.options.map((opt) => ({
@@ -810,6 +813,76 @@ WICHTIG: Die naechste Erzaehlung MUSS LOGISCH an dieser Position anknuepfen!`;
     if (mood === "combat" || mood === "danger") return "combat_event";
     if (mood === "exploration") return "location_discovery";
     return "player_decision";
+  }
+
+  /**
+   * Remove duplicated content from the start of a narrative.
+   * If the new narrative begins with similar text as the previous one,
+   * trim that repeated portion to prevent repetitive storytelling.
+   */
+  private deduplicateNarrative(newNarrative: string, previousNarrative: string): string {
+    if (!previousNarrative || !newNarrative) return newNarrative;
+
+    // Normalize for comparison
+    const normalizeText = (text: string): string =>
+      text.toLowerCase()
+        .replace(/[äöüß]/g, (c) => ({ "ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss" }[c] || c))
+        .replace(/[^\w\s]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const prevNorm = normalizeText(previousNarrative);
+    const newNorm = normalizeText(newNarrative);
+
+    // Find the longest common prefix (by words)
+    const prevWords = prevNorm.split(" ");
+    const newWords = newNorm.split(" ");
+
+    let commonPrefixLength = 0;
+    for (let i = 0; i < Math.min(prevWords.length, newWords.length); i++) {
+      if (prevWords[i] === newWords[i]) {
+        commonPrefixLength++;
+      } else {
+        break;
+      }
+    }
+
+    // If more than 5 words are identical at the start, this is likely repetition
+    if (commonPrefixLength > 5) {
+      console.log(`[DungeonMaster] Detected narrative repetition (${commonPrefixLength} words). Trimming...`);
+
+      // Find where the new content starts in the original narrative
+      const originalWords = newNarrative.split(/\s+/);
+
+      // Skip the repeated words and find the first different sentence
+      let skipCount = 0;
+      let charCount = 0;
+
+      for (let i = 0; i < originalWords.length && skipCount < commonPrefixLength; i++) {
+        charCount += originalWords[i].length + 1; // +1 for space
+        skipCount++;
+      }
+
+      // Find the next sentence boundary after the repeated part
+      const remainingText = newNarrative.slice(charCount).trim();
+      const sentenceMatch = remainingText.match(/^[^.!?]*[.!?]\s*/);
+
+      if (sentenceMatch && remainingText.length > sentenceMatch[0].length) {
+        // Start from the sentence after the repeated portion
+        const trimmedNarrative = remainingText.slice(sentenceMatch[0].length).trim();
+        if (trimmedNarrative.length > 50) {
+          // Ensure we have enough content left
+          return trimmedNarrative;
+        }
+      }
+
+      // If we can't find a good cut point, at least remove the exact duplicate beginning
+      if (remainingText.length > 50) {
+        return remainingText;
+      }
+    }
+
+    return newNarrative;
   }
 
   /**

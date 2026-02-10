@@ -65,6 +65,22 @@ VERBOTEN:
 === STORY-FORTSCHRITT (KRITISCH!) ===
 JEDE Spieleraktion MUSS die Geschichte VORANTREIBEN. Wiederholung ist VERBOTEN!
 
+ANTI-WIEDERHOLUNG (ABSOLUT KRITISCH!):
+- NIEMALS mit dem gleichen Satz beginnen wie der vorherige Narrativ!
+- NIEMALS den Anfang der "Aktuellen Szene" wiederholen oder paraphrasieren!
+- Der ERSTE SATZ deiner Antwort MUSS sich KOMPLETT vom vorherigen Text unterscheiden!
+- Wenn der vorherige Text mit "Du versuchst..." beginnt, BEGINNE ANDERS!
+- Wenn der vorherige Text mit "Du siehst..." beginnt, BEGINNE ANDERS!
+- Starte stattdessen mit: der AKTION des Spielers, einem NEUEN Ereignis, einer REAKTION, einem DIALOG
+
+BEISPIEL - FALSCH:
+Vorheriger Text: "Du versuchst, deine Augen an die Dunkelheit zu gewoehnen..."
+Neuer Text: "Du versuchst, deine Augen an die Dunkelheit zu gewoehnen..." ← VERBOTEN!
+
+BEISPIEL - RICHTIG:
+Vorheriger Text: "Du versuchst, deine Augen an die Dunkelheit zu gewoehnen..."
+Neuer Text: "Deine Schritte hallen durch den Korridor, als du dich dem Rascheln naeherst..." ← GUT!
+
 - NIEMALS dieselbe Szene zweimal beschreiben — wenn der Spieler etwas tut, PASSIERT etwas NEUES
 - JEDE Aktion hat ein ERGEBNIS: Entdeckung, Begegnung, Veraenderung, Information, Fortschritt
 - Wenn der Spieler "erkunden" waehlt → finde etwas Neues (Geheimtuer, NPC, Item, Hinweis, Gefahr)

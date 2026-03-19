@@ -1,19 +1,34 @@
-import { loadConfig } from './config.js';
+import { ConfigManager } from './config-manager.js';
 import { AIService } from './ai.js';
 import { WhatsAppClient } from './whatsapp.js';
 import { MessageHandler } from './message-handler.js';
+import { Dashboard } from './dashboard.js';
 
 async function main() {
   console.log('🤖 WhatsApp AI Agent startet...\n');
 
-  const config = loadConfig();
-  const ai = new AIService(config);
-  const wa = new WhatsAppClient(config);
-  const handler = new MessageHandler(config, ai, wa);
+  const configManager = new ConfigManager();
+  const ai = new AIService(configManager);
+  const wa = new WhatsAppClient(configManager);
+  const handler = new MessageHandler(configManager, ai, wa);
+
+  // Dashboard starten
+  const dashboard = new Dashboard(
+    configManager,
+    () => handler.getChatHistories(),
+    () => wa.getStatus()
+  );
+  handler.setDashboard(dashboard);
 
   wa.onMessage((msg) => handler.handle(msg));
 
   await wa.connect();
+
+  dashboard.addLog({
+    type: 'system',
+    text: 'Agent gestartet, warte auf WhatsApp-Verbindung...',
+    timestamp: Date.now(),
+  });
 
   // Graceful Shutdown
   const shutdown = () => {

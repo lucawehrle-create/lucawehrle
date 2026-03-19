@@ -1,13 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { Config } from './config.js';
+import type { ConfigManager } from './config-manager.js';
 import type { ChatMessage } from './types.js';
 
 export class AIService {
   private client: Anthropic;
-  private config: Config;
+  private configManager: ConfigManager;
 
-  constructor(config: Config) {
-    this.config = config;
+  constructor(configManager: ConfigManager) {
+    this.configManager = configManager;
+    const config = configManager.get();
     this.client = new Anthropic({ apiKey: config.anthropicApiKey });
   }
 
@@ -17,11 +18,13 @@ export class AIService {
     senderName: string,
     history: ChatMessage[]
   ): Promise<string> {
+    const config = this.configManager.get();
+
     const contextInfo = isGroup
       ? `Du bist in einer WhatsApp-Gruppe namens "${chatName}". Die letzte Nachricht ist von "${senderName}".`
       : `Du chattest mit "${chatName}" auf WhatsApp.`;
 
-    const systemPrompt = `${this.config.systemPrompt}
+    const systemPrompt = `${config.systemPrompt}
 
 ${contextInfo}
 
@@ -42,7 +45,7 @@ Wichtige Regeln:
     }));
 
     const response = await this.client.messages.create({
-      model: this.config.claudeModel,
+      model: config.claudeModel,
       max_tokens: 500,
       system: systemPrompt,
       messages,

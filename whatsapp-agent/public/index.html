@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp AI Agent</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>WhatsApp AI Agent</h1>
+      <div id="status" class="status offline">
+        <span class="status-dot"></span>
+        <span id="status-text">Verbinde...</span>
+      </div>
+    </div>
+    <nav>
+      <button class="nav-btn active" data-tab="live">Live Feed</button>
+      <button class="nav-btn" data-tab="chats">Chats</button>
+      <button class="nav-btn" data-tab="settings">Einstellungen</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Live Feed -->
+    <section id="tab-live" class="tab active">
+      <div class="tab-header">
+        <h2>Nachrichten-Feed</h2>
+        <div class="tab-actions">
+          <label class="toggle-label">
+            <input type="checkbox" id="auto-scroll" checked>
+            Auto-Scroll
+          </label>
+          <button id="clear-logs" class="btn btn-small btn-danger">Logs l&ouml;schen</button>
+        </div>
+      </div>
+      <div id="log-feed" class="log-feed">
+        <div class="empty-state">Warte auf Nachrichten...</div>
+      </div>
+    </section>
+
+    <!-- Chats -->
+    <section id="tab-chats" class="tab">
+      <div class="tab-header">
+        <h2>Aktive Chats</h2>
+        <button id="refresh-chats" class="btn btn-small">Aktualisieren</button>
+      </div>
+      <div id="chat-list" class="chat-list">
+        <div class="empty-state">Noch keine Chats</div>
+      </div>
+      <div id="chat-detail" class="chat-detail hidden">
+        <div class="chat-detail-header">
+          <button id="back-to-chats" class="btn btn-small">&larr; Zur&uuml;ck</button>
+          <h3 id="chat-detail-name"></h3>
+        </div>
+        <div id="chat-messages" class="chat-messages"></div>
+      </div>
+    </section>
+
+    <!-- Einstellungen -->
+    <section id="tab-settings" class="tab">
+      <h2>Einstellungen</h2>
+      <form id="settings-form">
+
+        <div class="settings-group">
+          <h3>KI-Verhalten</h3>
+
+          <div class="form-field">
+            <label for="systemPrompt">System-Prompt</label>
+            <textarea id="systemPrompt" rows="6" placeholder="Anweisungen f&uuml;r die KI..."></textarea>
+            <p class="hint">Bestimmt wie die KI antwortet: Tonalit&auml;t, Sprache, Regeln</p>
+          </div>
+
+          <div class="form-field">
+            <label for="claudeModel">Claude Modell</label>
+            <select id="claudeModel">
+              <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (schnell)</option>
+              <option value="claude-opus-4-20250514">Claude Opus 4 (smart)</option>
+              <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (g&uuml;nstig)</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="maxHistory">Kontext-Fenster (Nachrichten)</label>
+            <input type="number" id="maxHistory" min="1" max="50" value="20">
+            <p class="hint">Wie viele vorherige Nachrichten der KI als Kontext mitgegeben werden</p>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>Auto-Reply</h3>
+
+          <div class="form-field">
+            <label class="toggle-row">
+              <input type="checkbox" id="autoReplyEnabled">
+              <span>Auto-Reply aktiviert</span>
+            </label>
+            <p class="hint">Wenn deaktiviert, werden Nachrichten nur protokolliert</p>
+          </div>
+
+          <div class="form-field">
+            <label for="replyDelaySeconds">Antwort-Verz&ouml;gerung (Sekunden)</label>
+            <input type="number" id="replyDelaySeconds" min="0" max="30" value="3">
+            <p class="hint">Simuliert Tipp-Zeit f&uuml;r nat&uuml;rlicheres Verhalten</p>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>Gruppen</h3>
+
+          <div class="form-field">
+            <label class="toggle-row">
+              <input type="checkbox" id="groupsOnlyWhenMentioned">
+              <span>Nur antworten wenn erw&auml;hnt</span>
+            </label>
+            <p class="hint">In Gruppen nur reagieren wenn @erw&auml;hnt</p>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>Chat-Filter</h3>
+
+          <div class="form-field">
+            <label for="allowedChats">Erlaubte Chats (kommagetrennt)</label>
+            <input type="text" id="allowedChats" placeholder="Leer = alle Chats erlaubt">
+            <p class="hint">Chat-IDs z.B. 49123456789@s.whatsapp.net</p>
+          </div>
+
+          <div class="form-field">
+            <label for="blockedChats">Blockierte Chats (kommagetrennt)</label>
+            <input type="text" id="blockedChats" placeholder="Chat-IDs die ignoriert werden">
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Speichern</button>
+          <span id="save-status" class="save-status"></span>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

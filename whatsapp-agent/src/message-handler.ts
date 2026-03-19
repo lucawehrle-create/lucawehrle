@@ -1,24 +1,45 @@
-import type { Config } from './config.js';
 import type { AIService } from './ai.js';
 import type { WhatsAppClient, IncomingMessage } from './whatsapp.js';
+import type { ConfigManager } from './config-manager.js';
+import type { Dashboard } from './dashboard.js';
 import type { ChatHistory, ChatMessage } from './types.js';
 
 export class MessageHandler {
-  private config: Config;
+  private configManager: ConfigManager;
   private ai: AIService;
   private wa: WhatsAppClient;
+  private dashboard: Dashboard | null = null;
   private chatHistories: Map<string, ChatHistory> = new Map();
 
-  constructor(config: Config, ai: AIService, wa: WhatsAppClient) {
-    this.config = config;
+  constructor(configManager: ConfigManager, ai: AIService, wa: WhatsAppClient) {
+    this.configManager = configManager;
     this.ai = ai;
     this.wa = wa;
   }
 
+  setDashboard(dashboard: Dashboard): void {
+    this.dashboard = dashboard;
+  }
+
+  getChatHistories(): Map<string, ChatHistory> {
+    return this.chatHistories;
+  }
+
   async handle(incoming: IncomingMessage): Promise<void> {
+    const config = this.configManager.get();
+
     console.log(
       `📨 [${incoming.isGroup ? incoming.chatName : incoming.senderName}] ${incoming.senderName}: ${incoming.text}`
     );
+
+    this.dashboard?.addLog({
+      type: 'incoming',
+      chatId: incoming.chatId,
+      chatName: incoming.chatName,
+      senderName: incoming.senderName,
+      text: incoming.text,
+      timestamp: Date.now(),
+    });
 
     // Nachricht zur Historie hinzufügen
     this.addToHistory(incoming.chatId, {
@@ -28,7 +49,7 @@ export class MessageHandler {
       senderName: incoming.senderName,
     }, incoming.chatName, incoming.isGroup);
 
-    if (!this.config.autoReplyEnabled) {
+    if (!config.autoReplyEnabled) {
       console.log('   ⏸️  Auto-Reply ist deaktiviert, überspringe.');
       return;
     }
@@ -37,7 +58,7 @@ export class MessageHandler {
       const history = this.getHistory(incoming.chatId);
 
       // Tipp-Simulation
-      const typingMs = this.config.replyDelaySeconds * 1000;
+      const typingMs = config.replyDelaySeconds * 1000;
       await this.wa.simulateTyping(incoming.chatId, typingMs);
 
       // AI-Antwort generieren
@@ -57,6 +78,14 @@ export class MessageHandler {
       await this.wa.sendMessage(incoming.chatId, reply);
       console.log(`📤 [${incoming.isGroup ? incoming.chatName : incoming.senderName}] Antwort: ${reply}`);
 
+      this.dashboard?.addLog({
+        type: 'outgoing',
+        chatId: incoming.chatId,
+        chatName: incoming.chatName,
+        text: reply,
+        timestamp: Date.now(),
+      });
+
       // Antwort zur Historie hinzufügen
       this.addToHistory(incoming.chatId, {
         role: 'assistant',
@@ -64,7 +93,15 @@ export class MessageHandler {
         timestamp: Date.now(),
       }, incoming.chatName, incoming.isGroup);
     } catch (error) {
+      const errMsg = error instanceof Error ? error.message : String(error);
       console.error(`❌ Fehler bei der Verarbeitung:`, error);
+      this.dashboard?.addLog({
+        type: 'error',
+        chatId: incoming.chatId,
+        chatName: incoming.chatName,
+        text: `Fehler: ${errMsg}`,
+        timestamp: Date.now(),
+      });
     }
   }
 
@@ -86,9 +123,9 @@ export class MessageHandler {
     const history = this.chatHistories.get(chatId)!;
     history.messages.push(message);
 
-    // Historie begrenzen
-    if (history.messages.length > this.config.maxHistory) {
-      history.messages = history.messages.slice(-this.config.maxHistory);
+    const config = this.configManager.get();
+    if (history.messages.length > config.maxHistory) {
+      history.messages = history.messages.slice(-config.maxHistory);
     }
   }
 

@@ -1,0 +1,224 @@
+// --- State ---
+let ws = null;
+let autoScroll = true;
+
+// --- DOM ---
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+// --- WebSocket ---
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+
+  ws.onopen = () => pollStatus();
+
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'init') {
+      data.logs.forEach(addLogEntry);
+    } else if (data.type === 'log') {
+      addLogEntry(data.entry);
+    } else if (data.type === 'clear') {
+      $('#log-feed').innerHTML = '<div class="empty-state">Logs gelöscht</div>';
+    }
+  };
+
+  ws.onclose = () => {
+    setTimeout(connectWS, 3000);
+  };
+}
+
+// --- Log Feed ---
+function addLogEntry(entry) {
+  const feed = $('#log-feed');
+  const empty = feed.querySelector('.empty-state');
+  if (empty) empty.remove();
+
+  const div = document.createElement('div');
+  div.className = `log-entry ${entry.type}`;
+
+  const time = new Date(entry.timestamp).toLocaleTimeString('de-DE');
+  const icons = { incoming: '\u{1F4E8}', outgoing: '\u{1F4E4}', system: '\u{2699}\uFE0F', error: '\u{274C}' };
+
+  let meta = '';
+  if (entry.chatName || entry.senderName) {
+    const who = entry.senderName || entry.chatName;
+    meta = `<div class="log-meta">
+      <span><span class="log-sender">${icons[entry.type] || ''} ${escapeHtml(who)}</span>${entry.chatName && entry.senderName ? ` in ${escapeHtml(entry.chatName)}` : ''}</span>
+      <span>${time}</span>
+    </div>`;
+  } else {
+    meta = `<div class="log-meta"><span>${icons[entry.type] || ''}</span><span>${time}</span></div>`;
+  }
+
+  div.innerHTML = `${meta}<div class="log-text">${escapeHtml(entry.text)}</div>`;
+  feed.appendChild(div);
+
+  if (autoScroll) {
+    feed.scrollTop = feed.scrollHeight;
+  }
+}
+
+// --- Status Polling ---
+async function pollStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const status = await res.json();
+    const el = $('#status');
+    const text = $('#status-text');
+
+    if (status.connected) {
+      el.className = 'status online';
+      text.textContent = `Verbunden als ${status.name || 'Unbekannt'}`;
+    } else {
+      el.className = 'status offline';
+      text.textContent = 'Nicht verbunden';
+    }
+  } catch { /* ignore */ }
+  setTimeout(pollStatus, 5000);
+}
+
+// --- Settings ---
+async function loadSettings() {
+  const res = await fetch('/api/config');
+  const config = await res.json();
+
+  $('#systemPrompt').value = config.systemPrompt || '';
+  $('#claudeModel').value = config.claudeModel || 'claude-sonnet-4-20250514';
+  $('#maxHistory').value = config.maxHistory || 20;
+  $('#autoReplyEnabled').checked = config.autoReplyEnabled ?? true;
+  $('#replyDelaySeconds').value = config.replyDelaySeconds ?? 3;
+  $('#groupsOnlyWhenMentioned').checked = config.groupsOnlyWhenMentioned ?? true;
+  $('#allowedChats').value = (config.allowedChats || []).join(', ');
+  $('#blockedChats').value = (config.blockedChats || []).join(', ');
+}
+
+async function saveSettings(e) {
+  e.preventDefault();
+
+  const parseList = (val) => val.split(',').map(s => s.trim()).filter(Boolean);
+
+  const config = {
+    systemPrompt: $('#systemPrompt').value,
+    claudeModel: $('#claudeModel').value,
+    maxHistory: parseInt($('#maxHistory').value, 10),
+    autoReplyEnabled: $('#autoReplyEnabled').checked,
+    replyDelaySeconds: parseInt($('#replyDelaySeconds').value, 10),
+    groupsOnlyWhenMentioned: $('#groupsOnlyWhenMentioned').checked,
+    allowedChats: parseList($('#allowedChats').value),
+    blockedChats: parseList($('#blockedChats').value),
+  };
+
+  await fetch('/api/config', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  });
+
+  const status = $('#save-status');
+  status.textContent = 'Gespeichert!';
+  status.classList.add('visible');
+  setTimeout(() => status.classList.remove('visible'), 2000);
+}
+
+// --- Chats ---
+async function loadChats() {
+  const res = await fetch('/api/chats');
+  const chats = await res.json();
+  const list = $('#chat-list');
+
+  if (chats.length === 0) {
+    list.innerHTML = '<div class="empty-state">Noch keine Chats</div>';
+    return;
+  }
+
+  list.innerHTML = chats.map(chat => {
+    const preview = chat.lastMessage?.content || 'Keine Nachrichten';
+    const time = chat.lastMessage
+      ? new Date(chat.lastMessage.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+      : '';
+    return `
+      <div class="chat-item" data-chat-id="${escapeHtml(chat.chatId)}">
+        <div class="chat-item-left">
+          <span class="chat-item-name">${chat.isGroup ? '\u{1F465}' : '\u{1F464}'} ${escapeHtml(chat.chatName)}</span>
+          <span class="chat-item-preview">${escapeHtml(preview)}</span>
+        </div>
+        <div class="chat-item-meta">
+          <span>${time}</span>
+          <span class="chat-badge">${chat.messageCount}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  list.querySelectorAll('.chat-item').forEach(item => {
+    item.addEventListener('click', () => openChat(item.dataset.chatId));
+  });
+}
+
+async function openChat(chatId) {
+  const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}`);
+  const chat = await res.json();
+
+  $('#chat-list').style.display = 'none';
+  $('#chat-detail').classList.remove('hidden');
+  $('#chat-detail-name').textContent = `${chat.isGroup ? '\u{1F465}' : '\u{1F464}'} ${chat.chatName}`;
+
+  const container = $('#chat-messages');
+  container.innerHTML = chat.messages.map(msg => {
+    const time = new Date(msg.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    return `
+      <div class="chat-msg ${msg.role}">
+        ${msg.senderName ? `<div class="chat-msg-sender">${escapeHtml(msg.senderName)}</div>` : ''}
+        <div>${escapeHtml(msg.content)}</div>
+        <div class="chat-msg-time">${time}</div>
+      </div>`;
+  }).join('');
+
+  container.scrollTop = container.scrollHeight;
+}
+
+// --- Tab Navigation ---
+function setupTabs() {
+  $$('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      $$('.nav-btn').forEach(b => b.classList.remove('active'));
+      $$('.tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      $(`#tab-${btn.dataset.tab}`).classList.add('active');
+
+      if (btn.dataset.tab === 'settings') loadSettings();
+      if (btn.dataset.tab === 'chats') loadChats();
+    });
+  });
+}
+
+// --- Utils ---
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// --- Init ---
+document.addEventListener('DOMContentLoaded', () => {
+  setupTabs();
+  connectWS();
+
+  $('#auto-scroll').addEventListener('change', (e) => {
+    autoScroll = e.target.checked;
+  });
+
+  $('#clear-logs').addEventListener('click', async () => {
+    await fetch('/api/logs', { method: 'DELETE' });
+  });
+
+  $('#settings-form').addEventListener('submit', saveSettings);
+
+  $('#back-to-chats').addEventListener('click', () => {
+    $('#chat-list').style.display = '';
+    $('#chat-detail').classList.add('hidden');
+  });
+
+  $('#refresh-chats').addEventListener('click', loadChats);
+});

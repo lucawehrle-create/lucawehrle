@@ -8,7 +8,7 @@ import makeWASocket, {
 import { Boom } from '@hapi/boom';
 import pino from 'pino';
 import qrcode from 'qrcode-terminal';
-import type { Config } from './config.js';
+import type { ConfigManager } from './config-manager.js';
 
 export interface IncomingMessage {
   chatId: string;
@@ -25,18 +25,25 @@ type MessageHandler = (message: IncomingMessage) => Promise<void>;
 
 export class WhatsAppClient {
   private socket: WASocket | null = null;
-  private config: Config;
+  private configManager: ConfigManager;
   private logger: pino.Logger;
   private messageHandler: MessageHandler | null = null;
   private myJid: string = '';
+  private connected: boolean = false;
+  private userName: string = '';
 
-  constructor(config: Config) {
-    this.config = config;
+  constructor(configManager: ConfigManager) {
+    this.configManager = configManager;
+    const config = configManager.get();
     this.logger = pino({ level: config.logLevel });
   }
 
   onMessage(handler: MessageHandler) {
     this.messageHandler = handler;
+  }
+
+  getStatus(): { connected: boolean; name?: string } {
+    return { connected: this.connected, name: this.userName || undefined };
   }
 
   async connect(): Promise<void> {
@@ -63,6 +70,7 @@ export class WhatsAppClient {
       }
 
       if (connection === 'close') {
+        this.connected = false;
         const reason = (lastDisconnect?.error as Boom)?.output?.statusCode;
         const shouldReconnect = reason !== DisconnectReason.loggedOut;
 
@@ -76,10 +84,13 @@ export class WhatsAppClient {
       }
 
       if (connection === 'open') {
+        this.connected = true;
         this.myJid = this.socket?.user?.id ?? '';
+        this.userName = this.socket?.user?.name ?? 'Unbekannt';
         console.log('\n✅ WhatsApp verbunden!');
-        console.log(`   Angemeldet als: ${this.socket?.user?.name ?? 'Unbekannt'}`);
-        console.log(`   Auto-Reply: ${this.config.autoReplyEnabled ? 'AN' : 'AUS'}\n`);
+        console.log(`   Angemeldet als: ${this.userName}`);
+        const config = this.configManager.get();
+        console.log(`   Auto-Reply: ${config.autoReplyEnabled ? 'AN' : 'AUS'}\n`);
       }
     });
 
@@ -103,17 +114,19 @@ export class WhatsAppClient {
     const isGroup = chatId.endsWith('@g.us');
     const senderJid = isGroup ? msg.key.participant ?? '' : chatId;
 
+    const config = this.configManager.get();
+
     // Filter: erlaubte/blockierte Chats
-    if (this.config.allowedChats.length > 0 && !this.config.allowedChats.includes(chatId)) {
+    if (config.allowedChats.length > 0 && !config.allowedChats.includes(chatId)) {
       return;
     }
-    if (this.config.blockedChats.includes(chatId)) {
+    if (config.blockedChats.includes(chatId)) {
       return;
     }
 
     // In Gruppen: nur antworten wenn erwähnt
     const isMentioned = this.checkIfMentioned(msg, text);
-    if (isGroup && this.config.groupsOnlyWhenMentioned && !isMentioned) {
+    if (isGroup && config.groupsOnlyWhenMentioned && !isMentioned) {
       return;
     }
 
@@ -160,7 +173,6 @@ export class WhatsAppClient {
     msg: proto.IWebMessageInfo
   ): Promise<string> {
     if (chatId.endsWith('@g.us')) {
-      // Gruppenname aus Metadaten holen
       try {
         const metadata = await this.socket?.groupMetadata(chatId);
         return metadata?.subject ?? chatId;

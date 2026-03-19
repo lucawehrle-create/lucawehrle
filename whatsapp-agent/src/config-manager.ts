@@ -19,8 +19,8 @@ export class ConfigManager extends EventEmitter {
       try {
         const saved = JSON.parse(readFileSync(CONFIG_FILE, 'utf-8'));
         this.config = { ...this.config, ...saved, anthropicApiKey: this.config.anthropicApiKey };
-      } catch {
-        // Ignorieren wenn Datei kaputt
+      } catch (error) {
+        console.warn('config.json konnte nicht geladen werden, nutze Defaults:', error);
       }
     }
   }

@@ -98,7 +98,11 @@ export class WhatsAppClient {
       if (type !== 'notify') return;
 
       for (const msg of messages) {
-        await this.handleIncomingMessage(msg);
+        try {
+          await this.handleIncomingMessage(msg);
+        } catch (error) {
+          this.logger.error(error, 'Fehler bei Nachrichtenverarbeitung');
+        }
       }
     });
   }

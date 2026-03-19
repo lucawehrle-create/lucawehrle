@@ -65,7 +65,22 @@ export class Dashboard {
 
     // Config updaten
     this.app.put('/api/config', (req, res) => {
-      const updates: ConfigUpdate = req.body;
+      const body = req.body;
+      if (!body || typeof body !== 'object') {
+        res.status(400).json({ error: 'Ungültiger Request Body' });
+        return;
+      }
+
+      const updates: ConfigUpdate = {};
+      if (typeof body.systemPrompt === 'string') updates.systemPrompt = body.systemPrompt.slice(0, 5000);
+      if (typeof body.claudeModel === 'string') updates.claudeModel = body.claudeModel;
+      if (typeof body.autoReplyEnabled === 'boolean') updates.autoReplyEnabled = body.autoReplyEnabled;
+      if (typeof body.groupsOnlyWhenMentioned === 'boolean') updates.groupsOnlyWhenMentioned = body.groupsOnlyWhenMentioned;
+      if (typeof body.replyDelaySeconds === 'number') updates.replyDelaySeconds = Math.max(0, Math.min(30, body.replyDelaySeconds));
+      if (typeof body.maxHistory === 'number') updates.maxHistory = Math.max(1, Math.min(50, body.maxHistory));
+      if (Array.isArray(body.allowedChats)) updates.allowedChats = body.allowedChats.filter((s: unknown) => typeof s === 'string');
+      if (Array.isArray(body.blockedChats)) updates.blockedChats = body.blockedChats.filter((s: unknown) => typeof s === 'string');
+
       const config = this.configManager.update(updates);
       const { anthropicApiKey, ...safeConfig } = config;
       this.addLog({ type: 'system', text: 'Einstellungen aktualisiert', timestamp: Date.now() });

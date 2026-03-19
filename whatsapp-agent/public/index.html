@@ -83,9 +83,20 @@
             </div>
 
             <div class="form-field">
-              <label for="chatReplyDelay">Antwort-Verz&ouml;gerung (Sekunden)</label>
-              <input type="number" id="chatReplyDelay" min="0" max="30" placeholder="Leer = globale Einstellung">
-              <p class="hint">Eigene Tipp-Verz&ouml;gerung f&uuml;r diesen Chat</p>
+              <label>Antwort-Verz&ouml;gerung</label>
+              <div class="delay-range">
+                <div class="delay-input">
+                  <label for="chatDelayMin">Min</label>
+                  <input type="number" id="chatDelayMin" min="0" max="3600" placeholder="--">
+                </div>
+                <span class="delay-separator">bis</span>
+                <div class="delay-input">
+                  <label for="chatDelayMax">Max</label>
+                  <input type="number" id="chatDelayMax" min="0" max="3600" placeholder="--">
+                </div>
+                <span class="delay-unit">Sekunden</span>
+              </div>
+              <p class="hint">Leer = globale Einstellung. Bis 3600s (1 Stunde) m&ouml;glich.</p>
             </div>
 
             <div class="form-actions">
@@ -141,9 +152,20 @@
           </div>
 
           <div class="form-field">
-            <label for="replyDelaySeconds">Antwort-Verz&ouml;gerung (Sekunden)</label>
-            <input type="number" id="replyDelaySeconds" min="0" max="30" value="3">
-            <p class="hint">Simuliert Tipp-Zeit f&uuml;r nat&uuml;rlicheres Verhalten</p>
+            <label>Antwort-Verz&ouml;gerung</label>
+            <div class="delay-range">
+              <div class="delay-input">
+                <label for="replyDelayMin">Min</label>
+                <input type="number" id="replyDelayMin" min="0" max="3600" value="2">
+              </div>
+              <span class="delay-separator">bis</span>
+              <div class="delay-input">
+                <label for="replyDelayMax">Max</label>
+                <input type="number" id="replyDelayMax" min="0" max="3600" value="8">
+              </div>
+              <span class="delay-unit">Sekunden</span>
+            </div>
+            <p class="hint">Zuf&auml;llige Verz&ouml;gerung zwischen Min und Max. Bis 3600s (1 Stunde) m&ouml;glich.</p>
           </div>
         </div>
 

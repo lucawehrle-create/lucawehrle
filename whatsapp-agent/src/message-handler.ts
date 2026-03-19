@@ -80,10 +80,26 @@ export class MessageHandler {
     try {
       const history = this.store.getHistory(incoming.chatId, config.maxHistory);
 
-      // Tipp-Simulation (per-Chat override oder global)
-      const delaySeconds = chatSettings?.replyDelaySeconds ?? config.replyDelaySeconds;
-      const typingMs = delaySeconds * 1000;
-      await this.wa.simulateTyping(incoming.chatId, typingMs);
+      // Verzögerung berechnen (per-Chat override oder global)
+      const delayMin = chatSettings?.replyDelayMin ?? config.replyDelayMin;
+      const delayMax = chatSettings?.replyDelayMax ?? config.replyDelayMax;
+      const delaySec = delayMin + Math.random() * (Math.max(delayMax, delayMin) - delayMin);
+      const delayMs = Math.round(delaySec * 1000);
+
+      if (delayMs > 0) {
+        // Bei kurzen Delays: komplett als Tipp-Simulation
+        // Bei langen Delays: erst warten, dann kurz tippen
+        const TYPING_MAX_MS = 15_000; // Max 15s Tipp-Anzeige
+        if (delayMs <= TYPING_MAX_MS) {
+          await this.wa.simulateTyping(incoming.chatId, delayMs);
+        } else {
+          const waitMs = delayMs - TYPING_MAX_MS;
+          const typingMs = 3000 + Math.random() * 12_000; // 3-15s tippen
+          console.log(`   ⏳ Warte ${Math.round(delaySec)}s bevor geantwortet wird...`);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+          await this.wa.simulateTyping(incoming.chatId, typingMs);
+        }
+      }
 
       // Medien-Kontext für aktuelle Nachricht
       const currentMedia =

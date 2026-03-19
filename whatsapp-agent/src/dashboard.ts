@@ -81,7 +81,8 @@ export class Dashboard {
       if (typeof body.claudeModel === 'string') updates.claudeModel = body.claudeModel;
       if (typeof body.autoReplyEnabled === 'boolean') updates.autoReplyEnabled = body.autoReplyEnabled;
       if (typeof body.groupsOnlyWhenMentioned === 'boolean') updates.groupsOnlyWhenMentioned = body.groupsOnlyWhenMentioned;
-      if (typeof body.replyDelaySeconds === 'number') updates.replyDelaySeconds = Math.max(0, Math.min(30, body.replyDelaySeconds));
+      if (typeof body.replyDelayMin === 'number') updates.replyDelayMin = Math.max(0, Math.min(3600, body.replyDelayMin));
+      if (typeof body.replyDelayMax === 'number') updates.replyDelayMax = Math.max(0, Math.min(3600, body.replyDelayMax));
       if (typeof body.maxHistory === 'number') updates.maxHistory = Math.max(1, Math.min(50, body.maxHistory));
       if (Array.isArray(body.allowedChats)) updates.allowedChats = body.allowedChats.filter((s: unknown) => typeof s === 'string');
       if (Array.isArray(body.blockedChats)) updates.blockedChats = body.blockedChats.filter((s: unknown) => typeof s === 'string');
@@ -122,7 +123,8 @@ export class Dashboard {
         chatId: req.params.chatId,
         replyMode: 'default',
         customPrompt: null,
-        replyDelaySeconds: null,
+        replyDelayMin: null,
+        replyDelayMax: null,
       });
     });
 
@@ -143,9 +145,14 @@ export class Dashboard {
           ? body.customPrompt.slice(0, 5000)
           : null;
       }
-      if (body.replyDelaySeconds !== undefined) {
-        updates.replyDelaySeconds = typeof body.replyDelaySeconds === 'number'
-          ? Math.max(0, Math.min(30, body.replyDelaySeconds))
+      if (body.replyDelayMin !== undefined) {
+        updates.replyDelayMin = typeof body.replyDelayMin === 'number'
+          ? Math.max(0, Math.min(3600, body.replyDelayMin))
+          : null;
+      }
+      if (body.replyDelayMax !== undefined) {
+        updates.replyDelayMax = typeof body.replyDelayMax === 'number'
+          ? Math.max(0, Math.min(3600, body.replyDelayMax))
           : null;
       }
 

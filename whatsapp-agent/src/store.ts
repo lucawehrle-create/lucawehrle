@@ -38,10 +38,33 @@ export class Store {
         chat_id TEXT PRIMARY KEY,
         reply_mode TEXT NOT NULL DEFAULT 'default' CHECK(reply_mode IN ('default', 'enabled', 'disabled', 'proactive')),
         custom_prompt TEXT,
-        reply_delay_seconds INTEGER,
+        reply_delay_min INTEGER,
+        reply_delay_max INTEGER,
         FOREIGN KEY (chat_id) REFERENCES chats(chat_id)
       );
     `);
+
+    // Migration: alte reply_delay_seconds Spalte in min/max konvertieren
+    try {
+      const cols = this.db.pragma('table_info(chat_settings)') as Array<{ name: string }>;
+      const hasOldColumn = cols.some((c) => c.name === 'reply_delay_seconds');
+      if (hasOldColumn) {
+        this.db.exec(`
+          ALTER TABLE chat_settings RENAME TO chat_settings_old;
+          CREATE TABLE chat_settings (
+            chat_id TEXT PRIMARY KEY,
+            reply_mode TEXT NOT NULL DEFAULT 'default' CHECK(reply_mode IN ('default', 'enabled', 'disabled', 'proactive')),
+            custom_prompt TEXT,
+            reply_delay_min INTEGER,
+            reply_delay_max INTEGER,
+            FOREIGN KEY (chat_id) REFERENCES chats(chat_id)
+          );
+          INSERT INTO chat_settings (chat_id, reply_mode, custom_prompt, reply_delay_min, reply_delay_max)
+            SELECT chat_id, reply_mode, custom_prompt, reply_delay_seconds, reply_delay_seconds FROM chat_settings_old;
+          DROP TABLE chat_settings_old;
+        `);
+      }
+    } catch { /* table doesn't exist yet or already migrated */ }
   }
 
   addMessage(
@@ -184,14 +207,15 @@ export class Store {
 
   getChatSettings(chatId: string): ChatSettings | null {
     const row = this.db.prepare(`
-      SELECT chat_id, reply_mode, custom_prompt, reply_delay_seconds
+      SELECT chat_id, reply_mode, custom_prompt, reply_delay_min, reply_delay_max
       FROM chat_settings
       WHERE chat_id = ?
     `).get(chatId) as {
       chat_id: string;
       reply_mode: string;
       custom_prompt: string | null;
-      reply_delay_seconds: number | null;
+      reply_delay_min: number | null;
+      reply_delay_max: number | null;
     } | undefined;
 
     if (!row) return null;
@@ -200,7 +224,8 @@ export class Store {
       chatId: row.chat_id,
       replyMode: row.reply_mode as ChatReplyMode,
       customPrompt: row.custom_prompt,
-      replyDelaySeconds: row.reply_delay_seconds,
+      replyDelayMin: row.reply_delay_min,
+      replyDelayMax: row.reply_delay_max,
     };
   }
 
@@ -209,41 +234,46 @@ export class Store {
 
     const replyMode = settings.replyMode ?? current?.replyMode ?? 'default';
     const customPrompt = settings.customPrompt !== undefined ? settings.customPrompt : (current?.customPrompt ?? null);
-    const replyDelay = settings.replyDelaySeconds !== undefined ? settings.replyDelaySeconds : (current?.replyDelaySeconds ?? null);
+    const delayMin = settings.replyDelayMin !== undefined ? settings.replyDelayMin : (current?.replyDelayMin ?? null);
+    const delayMax = settings.replyDelayMax !== undefined ? settings.replyDelayMax : (current?.replyDelayMax ?? null);
 
     this.db.prepare(`
-      INSERT INTO chat_settings (chat_id, reply_mode, custom_prompt, reply_delay_seconds)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO chat_settings (chat_id, reply_mode, custom_prompt, reply_delay_min, reply_delay_max)
+      VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(chat_id) DO UPDATE SET
         reply_mode = excluded.reply_mode,
         custom_prompt = excluded.custom_prompt,
-        reply_delay_seconds = excluded.reply_delay_seconds
-    `).run(chatId, replyMode, customPrompt, replyDelay);
+        reply_delay_min = excluded.reply_delay_min,
+        reply_delay_max = excluded.reply_delay_max
+    `).run(chatId, replyMode, customPrompt, delayMin, delayMax);
 
     return {
       chatId,
       replyMode: replyMode as ChatReplyMode,
       customPrompt,
-      replyDelaySeconds: replyDelay,
+      replyDelayMin: delayMin,
+      replyDelayMax: delayMax,
     };
   }
 
   getAllChatSettings(): ChatSettings[] {
     const rows = this.db.prepare(`
-      SELECT chat_id, reply_mode, custom_prompt, reply_delay_seconds
+      SELECT chat_id, reply_mode, custom_prompt, reply_delay_min, reply_delay_max
       FROM chat_settings
     `).all() as Array<{
       chat_id: string;
       reply_mode: string;
       custom_prompt: string | null;
-      reply_delay_seconds: number | null;
+      reply_delay_min: number | null;
+      reply_delay_max: number | null;
     }>;
 
     return rows.map((row) => ({
       chatId: row.chat_id,
       replyMode: row.reply_mode as ChatReplyMode,
       customPrompt: row.custom_prompt,
-      replyDelaySeconds: row.reply_delay_seconds,
+      replyDelayMin: row.reply_delay_min,
+      replyDelayMax: row.reply_delay_max,
     }));
   }
 

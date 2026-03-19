@@ -115,7 +115,8 @@ async function loadSettings() {
   $('#claudeModel').value = config.claudeModel || 'claude-sonnet-4-20250514';
   $('#maxHistory').value = config.maxHistory || 20;
   $('#autoReplyEnabled').checked = config.autoReplyEnabled ?? true;
-  $('#replyDelaySeconds').value = config.replyDelaySeconds ?? 3;
+  $('#replyDelayMin').value = config.replyDelayMin ?? 2;
+  $('#replyDelayMax').value = config.replyDelayMax ?? 8;
   $('#groupsOnlyWhenMentioned').checked = config.groupsOnlyWhenMentioned ?? true;
   $('#allowedChats').value = (config.allowedChats || []).join(', ');
   $('#blockedChats').value = (config.blockedChats || []).join(', ');
@@ -131,7 +132,8 @@ async function saveSettings(e) {
     claudeModel: $('#claudeModel').value,
     maxHistory: parseInt($('#maxHistory').value, 10),
     autoReplyEnabled: $('#autoReplyEnabled').checked,
-    replyDelaySeconds: parseInt($('#replyDelaySeconds').value, 10),
+    replyDelayMin: parseInt($('#replyDelayMin').value, 10),
+    replyDelayMax: parseInt($('#replyDelayMax').value, 10),
     groupsOnlyWhenMentioned: $('#groupsOnlyWhenMentioned').checked,
     allowedChats: parseList($('#allowedChats').value),
     blockedChats: parseList($('#blockedChats').value),
@@ -225,18 +227,21 @@ async function loadChatSettings(chatId) {
 
   $('#chatReplyMode').value = settings.replyMode || 'default';
   $('#chatCustomPrompt').value = settings.customPrompt || '';
-  $('#chatReplyDelay').value = settings.replyDelaySeconds ?? '';
+  $('#chatDelayMin').value = settings.replyDelayMin ?? '';
+  $('#chatDelayMax').value = settings.replyDelayMax ?? '';
 }
 
 async function saveChatSettings() {
   if (!currentChatId) return;
 
-  const delayVal = $('#chatReplyDelay').value;
+  const minVal = $('#chatDelayMin').value;
+  const maxVal = $('#chatDelayMax').value;
 
   const settings = {
     replyMode: $('#chatReplyMode').value,
     customPrompt: $('#chatCustomPrompt').value || null,
-    replyDelaySeconds: delayVal !== '' ? parseInt(delayVal, 10) : null,
+    replyDelayMin: minVal !== '' ? parseInt(minVal, 10) : null,
+    replyDelayMax: maxVal !== '' ? parseInt(maxVal, 10) : null,
   };
 
   await fetch(`/api/chats/${encodeURIComponent(currentChatId)}/settings`, {

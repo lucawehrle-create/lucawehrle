@@ -7,7 +7,8 @@ export interface Config {
   allowedChats: string[];
   blockedChats: string[];
   autoReplyEnabled: boolean;
-  replyDelaySeconds: number;
+  replyDelayMin: number;
+  replyDelayMax: number;
   maxHistory: number;
   groupsOnlyWhenMentioned: boolean;
   logLevel: string;
@@ -39,7 +40,8 @@ export function loadConfig(): Config {
     allowedChats: parseList(getEnv('ALLOWED_CHATS', '')),
     blockedChats: parseList(getEnv('BLOCKED_CHATS', '')),
     autoReplyEnabled: getEnv('AUTO_REPLY_ENABLED', 'true') === 'true',
-    replyDelaySeconds: parseInt(getEnv('REPLY_DELAY_SECONDS', '3'), 10),
+    replyDelayMin: parseInt(getEnv('REPLY_DELAY_MIN', '2'), 10),
+    replyDelayMax: parseInt(getEnv('REPLY_DELAY_MAX', '8'), 10),
     maxHistory: parseInt(getEnv('MAX_HISTORY', '20'), 10),
     groupsOnlyWhenMentioned: getEnv('GROUPS_ONLY_WHEN_MENTIONED', 'true') === 'true',
     logLevel: getEnv('LOG_LEVEL', 'info'),

@@ -6,7 +6,8 @@ export interface ChatSettings {
   chatId: string;
   replyMode: ChatReplyMode;
   customPrompt: string | null;
-  replyDelaySeconds: number | null;
+  replyDelayMin: number | null;
+  replyDelayMax: number | null;
 }
 
 export interface ChatMessage {

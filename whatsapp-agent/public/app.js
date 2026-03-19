@@ -20,13 +20,37 @@ function connectWS() {
     } else if (data.type === 'log') {
       addLogEntry(data.entry);
     } else if (data.type === 'clear') {
-      $('#log-feed').innerHTML = '<div class="empty-state">Logs gelöscht</div>';
+      $('#log-feed').innerHTML = '<div class="empty-state">Logs gel\u00f6scht</div>';
     }
   };
 
   ws.onclose = () => {
     setTimeout(connectWS, 3000);
   };
+}
+
+// --- Media Rendering ---
+function renderMedia(mediaType, mediaPath) {
+  if (!mediaType || !mediaPath) return '';
+
+  // Pfad zu URL konvertieren (data/media/... -> /media/...)
+  const url = '/' + mediaPath.replace(/^data\//, '');
+
+  if (mediaType === 'image' || mediaType === 'sticker') {
+    return `<div class="media-preview"><img src="${url}" alt="Bild" loading="lazy" onclick="window.open('${url}','_blank')"></div>`;
+  }
+  if (mediaType === 'video') {
+    return `<div class="media-preview"><video src="${url}" controls preload="metadata"></video></div>`;
+  }
+  if (mediaType === 'audio') {
+    return `<div class="media-preview"><audio src="${url}" controls preload="metadata"></audio></div>`;
+  }
+  return '';
+}
+
+function mediaIcon(mediaType) {
+  const icons = { image: '\u{1F5BC}\uFE0F', video: '\u{1F3AC}', audio: '\u{1F3A4}', sticker: '\u{1F3AD}' };
+  return icons[mediaType] || '';
 }
 
 // --- Log Feed ---
@@ -44,15 +68,17 @@ function addLogEntry(entry) {
   let meta = '';
   if (entry.chatName || entry.senderName) {
     const who = entry.senderName || entry.chatName;
+    const mediaTag = entry.mediaType ? ` ${mediaIcon(entry.mediaType)}` : '';
     meta = `<div class="log-meta">
-      <span><span class="log-sender">${icons[entry.type] || ''} ${escapeHtml(who)}</span>${entry.chatName && entry.senderName ? ` in ${escapeHtml(entry.chatName)}` : ''}</span>
+      <span><span class="log-sender">${icons[entry.type] || ''} ${escapeHtml(who)}${mediaTag}</span>${entry.chatName && entry.senderName ? ` in ${escapeHtml(entry.chatName)}` : ''}</span>
       <span>${time}</span>
     </div>`;
   } else {
     meta = `<div class="log-meta"><span>${icons[entry.type] || ''}</span><span>${time}</span></div>`;
   }
 
-  div.innerHTML = `${meta}<div class="log-text">${escapeHtml(entry.text)}</div>`;
+  const mediaHtml = renderMedia(entry.mediaType, entry.mediaPath);
+  div.innerHTML = `${meta}${mediaHtml}<div class="log-text">${escapeHtml(entry.text)}</div>`;
   feed.appendChild(div);
 
   if (autoScroll) {
@@ -134,9 +160,17 @@ async function loadChats() {
   }
 
   list.innerHTML = chats.map(chat => {
-    const preview = chat.lastMessage?.content || 'Keine Nachrichten';
-    const time = chat.lastMessage
-      ? new Date(chat.lastMessage.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+    const lastMsg = chat.lastMessage;
+    let preview = 'Keine Nachrichten';
+    if (lastMsg) {
+      if (lastMsg.mediaType && !lastMsg.content) {
+        preview = `${mediaIcon(lastMsg.mediaType)} ${lastMsg.mediaType}`;
+      } else {
+        preview = lastMsg.content || 'Keine Nachrichten';
+      }
+    }
+    const time = lastMsg
+      ? new Date(lastMsg.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
       : '';
     return `
       <div class="chat-item" data-chat-id="${escapeHtml(chat.chatId)}">
@@ -167,10 +201,12 @@ async function openChat(chatId) {
   const container = $('#chat-messages');
   container.innerHTML = chat.messages.map(msg => {
     const time = new Date(msg.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    const media = renderMedia(msg.mediaType, msg.mediaPath);
     return `
       <div class="chat-msg ${msg.role}">
         ${msg.senderName ? `<div class="chat-msg-sender">${escapeHtml(msg.senderName)}</div>` : ''}
-        <div>${escapeHtml(msg.content)}</div>
+        ${media}
+        <div>${escapeHtml(msg.content || (msg.mediaType ? `[${msg.mediaType}]` : ''))}</div>
         <div class="chat-msg-time">${time}</div>
       </div>`;
   }).join('');

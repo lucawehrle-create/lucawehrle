@@ -4,11 +4,18 @@ import makeWASocket, {
   WASocket,
   proto,
   makeCacheableSignalKeyStore,
+  downloadMediaMessage,
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { randomUUID } from 'crypto';
 import pino from 'pino';
 import qrcode from 'qrcode-terminal';
 import type { ConfigManager } from './config-manager.js';
+import type { MediaType } from './types.js';
+
+const MEDIA_DIR = 'data/media';
 
 export interface IncomingMessage {
   chatId: string;
@@ -19,6 +26,10 @@ export interface IncomingMessage {
   isGroup: boolean;
   isMentioned: boolean;
   messageKey: proto.IMessageKey;
+  mediaType?: MediaType;
+  mediaPath?: string;
+  mediaBuffer?: Buffer;
+  mediaMimeType?: string;
 }
 
 type MessageHandler = (message: IncomingMessage) => Promise<void>;
@@ -47,6 +58,8 @@ export class WhatsAppClient {
   }
 
   async connect(): Promise<void> {
+    await mkdir(MEDIA_DIR, { recursive: true });
+
     const { state, saveCreds } = await useMultiFileAuthState('auth');
 
     this.socket = makeWASocket({
@@ -111,9 +124,6 @@ export class WhatsAppClient {
     if (!msg.message || !msg.key.remoteJid) return;
     if (msg.key.fromMe) return;
 
-    const text = this.extractText(msg);
-    if (!text) return;
-
     const chatId = msg.key.remoteJid;
     const isGroup = chatId.endsWith('@g.us');
     const senderJid = isGroup ? msg.key.participant ?? '' : chatId;
@@ -128,10 +138,29 @@ export class WhatsAppClient {
       return;
     }
 
+    // Text und Medien extrahieren
+    const { text, mediaType, mediaMimeType } = this.extractContent(msg);
+
+    // Mindestens Text oder Medien müssen vorhanden sein
+    if (!text && !mediaType) return;
+
     // In Gruppen: nur antworten wenn erwähnt
-    const isMentioned = this.checkIfMentioned(msg, text);
+    const isMentioned = this.checkIfMentioned(msg, text ?? '');
     if (isGroup && config.groupsOnlyWhenMentioned && !isMentioned) {
       return;
+    }
+
+    // Medien herunterladen wenn vorhanden
+    let mediaPath: string | undefined;
+    let mediaBuffer: Buffer | undefined;
+    if (mediaType) {
+      try {
+        const result = await this.downloadMedia(msg, mediaType, mediaMimeType);
+        mediaPath = result.path;
+        mediaBuffer = result.buffer;
+      } catch (error) {
+        this.logger.warn(error, 'Medien konnten nicht heruntergeladen werden');
+      }
     }
 
     const chatName = await this.getChatName(chatId, msg);
@@ -143,23 +172,112 @@ export class WhatsAppClient {
         chatName,
         senderJid,
         senderName,
-        text,
+        text: text ?? '',
         isGroup,
         isMentioned,
         messageKey: msg.key,
+        mediaType,
+        mediaPath,
+        mediaBuffer,
+        mediaMimeType,
       });
     }
   }
 
-  private extractText(msg: proto.IWebMessageInfo): string | null {
+  private extractContent(msg: proto.IWebMessageInfo): {
+    text: string | null;
+    mediaType: MediaType;
+    mediaMimeType?: string;
+  } {
     const m = msg.message!;
-    return (
+
+    // Bild
+    if (m.imageMessage) {
+      return {
+        text: m.imageMessage.caption ?? null,
+        mediaType: 'image',
+        mediaMimeType: m.imageMessage.mimetype ?? 'image/jpeg',
+      };
+    }
+
+    // Video
+    if (m.videoMessage) {
+      return {
+        text: m.videoMessage.caption ?? null,
+        mediaType: 'video',
+        mediaMimeType: m.videoMessage.mimetype ?? 'video/mp4',
+      };
+    }
+
+    // Sprachnachricht / Audio
+    if (m.audioMessage) {
+      return {
+        text: null,
+        mediaType: 'audio',
+        mediaMimeType: m.audioMessage.mimetype ?? 'audio/ogg',
+      };
+    }
+
+    // Sticker
+    if (m.stickerMessage) {
+      return {
+        text: null,
+        mediaType: 'sticker',
+        mediaMimeType: m.stickerMessage.mimetype ?? 'image/webp',
+      };
+    }
+
+    // Nur Text
+    const text =
       m.conversation ??
       m.extendedTextMessage?.text ??
-      m.imageMessage?.caption ??
-      m.videoMessage?.caption ??
-      null
-    );
+      null;
+
+    return { text, mediaType: null };
+  }
+
+  private async downloadMedia(
+    msg: proto.IWebMessageInfo,
+    mediaType: MediaType,
+    mimeType?: string
+  ): Promise<{ path: string; buffer: Buffer }> {
+    const buffer = await downloadMediaMessage(
+      msg,
+      'buffer',
+      {},
+      {
+        logger: this.logger,
+        reuploadRequest: this.socket!.updateMediaMessage,
+      }
+    ) as Buffer;
+
+    const ext = this.getExtension(mimeType ?? '', mediaType);
+    const filename = `${Date.now()}-${randomUUID().slice(0, 8)}.${ext}`;
+    const subDir = join(MEDIA_DIR, mediaType ?? 'other');
+    await mkdir(subDir, { recursive: true });
+    const filePath = join(subDir, filename);
+    await writeFile(filePath, buffer);
+
+    return { path: filePath, buffer };
+  }
+
+  private getExtension(mimeType: string, mediaType: MediaType): string {
+    const map: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+      'image/gif': 'gif',
+      'video/mp4': 'mp4',
+      'audio/ogg': 'ogg',
+      'audio/ogg; codecs=opus': 'ogg',
+      'audio/mpeg': 'mp3',
+    };
+    if (map[mimeType]) return map[mimeType];
+    if (mediaType === 'image') return 'jpg';
+    if (mediaType === 'video') return 'mp4';
+    if (mediaType === 'audio') return 'ogg';
+    if (mediaType === 'sticker') return 'webp';
+    return 'bin';
   }
 
   private checkIfMentioned(msg: proto.IWebMessageInfo, text: string): boolean {

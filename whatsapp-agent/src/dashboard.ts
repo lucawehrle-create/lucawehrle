@@ -4,7 +4,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import type { ConfigManager, ConfigUpdate } from './config-manager.js';
-import type { ChatHistory } from './types.js';
+import type { Store } from './store.js';
+import type { MediaType } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -16,6 +17,8 @@ export interface LogEntry {
   senderName?: string;
   text: string;
   timestamp: number;
+  mediaType?: MediaType;
+  mediaPath?: string;
 }
 
 export class Dashboard {
@@ -23,21 +26,24 @@ export class Dashboard {
   private wss: WebSocketServer;
   private logs: LogEntry[] = [];
   private configManager: ConfigManager;
-  private getChatHistories: () => Map<string, ChatHistory>;
+  private getStore: () => Store;
   private getConnectionStatus: () => { connected: boolean; name?: string };
 
   constructor(
     configManager: ConfigManager,
-    getChatHistories: () => Map<string, ChatHistory>,
+    getStore: () => Store,
     getConnectionStatus: () => { connected: boolean; name?: string }
   ) {
     this.configManager = configManager;
-    this.getChatHistories = getChatHistories;
+    this.getStore = getStore;
     this.getConnectionStatus = getConnectionStatus;
 
     this.app = express();
     this.app.use(express.json());
     this.app.use(express.static(join(__dirname, '..', 'public')));
+
+    // Medien-Dateien servieren
+    this.app.use('/media', express.static('data/media'));
 
     this.setupRoutes();
 
@@ -45,7 +51,6 @@ export class Dashboard {
     this.wss = new WebSocketServer({ server });
 
     this.wss.on('connection', (ws) => {
-      // Sende aktuelle Logs beim Verbinden
       ws.send(JSON.stringify({ type: 'init', logs: this.logs.slice(-100) }));
     });
 
@@ -92,22 +97,16 @@ export class Dashboard {
       res.json(this.getConnectionStatus());
     });
 
-    // Chat-Historien
+    // Chat-Übersicht (aus DB)
     this.app.get('/api/chats', (_req, res) => {
-      const histories = this.getChatHistories();
-      const chats = Array.from(histories.entries()).map(([id, h]) => ({
-        chatId: id,
-        chatName: h.chatName,
-        isGroup: h.isGroup,
-        messageCount: h.messages.length,
-        lastMessage: h.messages[h.messages.length - 1],
-      }));
-      res.json(chats);
+      const store = this.getStore();
+      res.json(store.getAllChats());
     });
 
+    // Chat-Detail (aus DB)
     this.app.get('/api/chats/:chatId', (req, res) => {
-      const histories = this.getChatHistories();
-      const history = histories.get(req.params.chatId);
+      const store = this.getStore();
+      const history = store.getChatDetail(req.params.chatId);
       if (!history) {
         res.status(404).json({ error: 'Chat nicht gefunden' });
         return;

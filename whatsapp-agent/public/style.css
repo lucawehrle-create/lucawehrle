@@ -224,6 +224,41 @@ h2 { font-size: 16px; font-weight: 600; }
 .chat-msg-sender { font-size: 11px; font-weight: 600; color: var(--blue); margin-bottom: 2px; }
 .chat-msg-time { font-size: 10px; color: var(--text-muted); margin-top: 4px; text-align: right; }
 
+/* Media */
+.media-preview { margin: 6px 0; }
+
+.media-preview img {
+  max-width: 280px;
+  max-height: 280px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.media-preview img:hover { opacity: 0.85; }
+
+.media-preview video {
+  max-width: 320px;
+  max-height: 240px;
+  border-radius: var(--radius);
+}
+
+.media-preview audio {
+  width: 100%;
+  max-width: 280px;
+  height: 36px;
+}
+
+.log-entry .media-preview img {
+  max-width: 200px;
+  max-height: 200px;
+}
+
+.log-entry .media-preview video {
+  max-width: 240px;
+  max-height: 180px;
+}
+
 /* Settings */
 .settings-group {
   background: var(--bg-card);

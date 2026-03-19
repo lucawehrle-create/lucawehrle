@@ -1,21 +1,27 @@
+import { mkdirSync } from 'fs';
 import { ConfigManager } from './config-manager.js';
 import { AIService } from './ai.js';
 import { WhatsAppClient } from './whatsapp.js';
 import { MessageHandler } from './message-handler.js';
 import { Dashboard } from './dashboard.js';
+import { Store } from './store.js';
 
 async function main() {
   console.log('🤖 WhatsApp AI Agent startet...\n');
 
+  // data-Verzeichnis sicherstellen
+  mkdirSync('data', { recursive: true });
+
   const configManager = new ConfigManager();
+  const store = new Store('data/chat-history.db');
   const ai = new AIService(configManager);
   const wa = new WhatsAppClient(configManager);
-  const handler = new MessageHandler(configManager, ai, wa);
+  const handler = new MessageHandler(configManager, ai, wa, store);
 
   // Dashboard starten
   const dashboard = new Dashboard(
     configManager,
-    () => handler.getChatHistories(),
+    () => handler.getStore(),
     () => wa.getStatus()
   );
   handler.setDashboard(dashboard);
@@ -33,6 +39,7 @@ async function main() {
   // Graceful Shutdown
   const shutdown = () => {
     console.log('\n👋 Agent wird beendet...');
+    store.close();
     process.exit(0);
   };
 

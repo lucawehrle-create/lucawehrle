@@ -28,6 +28,7 @@ export class Dashboard {
   private configManager: ConfigManager;
   private getStore: () => Store;
   private getConnectionStatus: () => { connected: boolean; name?: string };
+  private sendWhatsAppMessage: ((chatId: string, text: string) => Promise<void>) | null = null;
 
   constructor(
     configManager: ConfigManager,
@@ -178,6 +179,52 @@ export class Dashboard {
       this.broadcast({ type: 'clear' });
       res.json({ ok: true });
     });
+
+    // Manuelle Nachricht senden
+    this.app.post('/api/chats/:chatId/send', async (req, res) => {
+      const { text } = req.body;
+      if (!text || typeof text !== 'string' || !text.trim()) {
+        res.status(400).json({ error: 'Text darf nicht leer sein' });
+        return;
+      }
+
+      if (!this.sendWhatsAppMessage) {
+        res.status(503).json({ error: 'WhatsApp ist nicht verfügbar' });
+        return;
+      }
+
+      const chatId = req.params.chatId;
+      const store = this.getStore();
+
+      try {
+        await this.sendWhatsAppMessage(chatId, text.trim());
+
+        // In DB speichern
+        const chat = store.getChatDetail(chatId);
+        store.addMessage(chatId, chat?.chatName ?? chatId, chat?.isGroup ?? false, {
+          role: 'assistant',
+          content: text.trim(),
+          timestamp: Date.now(),
+        });
+
+        this.addLog({
+          type: 'outgoing',
+          chatId,
+          chatName: chat?.chatName ?? chatId,
+          text: text.trim(),
+          timestamp: Date.now(),
+        });
+
+        res.json({ ok: true });
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        res.status(500).json({ error: errMsg });
+      }
+    });
+  }
+
+  setSendMessage(fn: (chatId: string, text: string) => Promise<void>): void {
+    this.sendWhatsAppMessage = fn;
   }
 
   addLog(entry: LogEntry): void {

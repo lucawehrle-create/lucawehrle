@@ -25,6 +25,7 @@ async function main() {
     () => wa.getStatus()
   );
   handler.setDashboard(dashboard);
+  dashboard.setSendMessage((chatId, text) => wa.sendMessage(chatId, text));
 
   wa.onMessage((msg) => handler.handle(msg));
 

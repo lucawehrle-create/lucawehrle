@@ -282,6 +282,56 @@ async function openChat(chatId) {
   }).join('');
 
   container.scrollTop = container.scrollHeight;
+
+  // Input-Feld fokussieren und leeren
+  const input = $('#chat-input');
+  input.value = '';
+  input.style.height = 'auto';
+  input.focus();
+}
+
+// --- Nachricht senden ---
+async function sendManualMessage() {
+  if (!currentChatId) return;
+
+  const input = $('#chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const sendBtn = $('#chat-send');
+  sendBtn.disabled = true;
+  input.disabled = true;
+
+  try {
+    const res = await fetch(`/api/chats/${encodeURIComponent(currentChatId)}/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Senden fehlgeschlagen');
+    }
+
+    // Nachricht lokal in die Chat-Ansicht einfügen
+    const container = $('#chat-messages');
+    const time = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    const div = document.createElement('div');
+    div.className = 'chat-msg assistant';
+    div.innerHTML = `<div>${escapeHtml(text)}</div><div class="chat-msg-time">${time}</div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+
+    input.value = '';
+    input.style.height = 'auto';
+  } catch (error) {
+    alert(`Fehler beim Senden: ${error.message}`);
+  } finally {
+    sendBtn.disabled = false;
+    input.disabled = false;
+    input.focus();
+  }
 }
 
 // --- Tab Navigation ---
@@ -335,4 +385,22 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#save-chat-settings').addEventListener('click', saveChatSettings);
 
   $('#refresh-chats').addEventListener('click', loadChats);
+
+  // Chat-Nachricht senden
+  $('#chat-send').addEventListener('click', sendManualMessage);
+
+  // Enter = Senden, Shift+Enter = Zeilenumbruch
+  $('#chat-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendManualMessage();
+    }
+  });
+
+  // Textarea auto-resize
+  $('#chat-input').addEventListener('input', (e) => {
+    const el = e.target;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  });
 });

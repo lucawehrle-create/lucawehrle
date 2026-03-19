@@ -53,7 +53,48 @@
         <div class="chat-detail-header">
           <button id="back-to-chats" class="btn btn-small">&larr; Zur&uuml;ck</button>
           <h3 id="chat-detail-name"></h3>
+          <button id="toggle-chat-settings" class="btn btn-small">Einstellungen</button>
         </div>
+
+        <div id="chat-settings-panel" class="chat-settings-panel hidden">
+          <div class="settings-group">
+            <h3>Chat-Einstellungen</h3>
+
+            <div class="form-field">
+              <label for="chatReplyMode">Antwort-Modus</label>
+              <select id="chatReplyMode">
+                <option value="default">Standard (globale Einstellung)</option>
+                <option value="enabled">Immer antworten</option>
+                <option value="disabled">Nie antworten</option>
+                <option value="proactive">Proaktiv antworten</option>
+              </select>
+              <p class="hint">
+                <strong>Standard:</strong> Folgt der globalen Auto-Reply Einstellung<br>
+                <strong>Immer:</strong> Antwortet immer, auch wenn global deaktiviert<br>
+                <strong>Nie:</strong> Antwortet nie, auch wenn global aktiviert<br>
+                <strong>Proaktiv:</strong> Antwortet immer und engagierter
+              </p>
+            </div>
+
+            <div class="form-field">
+              <label for="chatCustomPrompt">Custom Prompt (optional)</label>
+              <textarea id="chatCustomPrompt" rows="4" placeholder="Eigener System-Prompt f&uuml;r diesen Chat. Leer = globaler Prompt"></textarea>
+              <p class="hint">&Uuml;berschreibt den globalen System-Prompt nur f&uuml;r diesen Chat</p>
+            </div>
+
+            <div class="form-field">
+              <label for="chatReplyDelay">Antwort-Verz&ouml;gerung (Sekunden)</label>
+              <input type="number" id="chatReplyDelay" min="0" max="30" placeholder="Leer = globale Einstellung">
+              <p class="hint">Eigene Tipp-Verz&ouml;gerung f&uuml;r diesen Chat</p>
+            </div>
+
+            <div class="form-actions">
+              <button id="save-chat-settings" class="btn btn-primary">Speichern</button>
+              <span id="chat-settings-status" class="save-status"></span>
+            </div>
+          </div>
+        </div>
+
         <div id="chat-messages" class="chat-messages"></div>
       </div>
     </section>

@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import type { ChatMessage, ChatHistory, MediaType } from './types.js';
+import type { ChatMessage, ChatHistory, ChatSettings, ChatReplyMode, MediaType } from './types.js';
 
 export class Store {
   private db: Database.Database;
@@ -33,6 +33,14 @@ export class Store {
 
       CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages(chat_id);
       CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);
+
+      CREATE TABLE IF NOT EXISTS chat_settings (
+        chat_id TEXT PRIMARY KEY,
+        reply_mode TEXT NOT NULL DEFAULT 'default' CHECK(reply_mode IN ('default', 'enabled', 'disabled', 'proactive')),
+        custom_prompt TEXT,
+        reply_delay_seconds INTEGER,
+        FOREIGN KEY (chat_id) REFERENCES chats(chat_id)
+      );
     `);
   }
 
@@ -172,6 +180,71 @@ export class Store {
           : undefined,
       };
     });
+  }
+
+  getChatSettings(chatId: string): ChatSettings | null {
+    const row = this.db.prepare(`
+      SELECT chat_id, reply_mode, custom_prompt, reply_delay_seconds
+      FROM chat_settings
+      WHERE chat_id = ?
+    `).get(chatId) as {
+      chat_id: string;
+      reply_mode: string;
+      custom_prompt: string | null;
+      reply_delay_seconds: number | null;
+    } | undefined;
+
+    if (!row) return null;
+
+    return {
+      chatId: row.chat_id,
+      replyMode: row.reply_mode as ChatReplyMode,
+      customPrompt: row.custom_prompt,
+      replyDelaySeconds: row.reply_delay_seconds,
+    };
+  }
+
+  updateChatSettings(chatId: string, settings: Partial<Omit<ChatSettings, 'chatId'>>): ChatSettings {
+    const current = this.getChatSettings(chatId);
+
+    const replyMode = settings.replyMode ?? current?.replyMode ?? 'default';
+    const customPrompt = settings.customPrompt !== undefined ? settings.customPrompt : (current?.customPrompt ?? null);
+    const replyDelay = settings.replyDelaySeconds !== undefined ? settings.replyDelaySeconds : (current?.replyDelaySeconds ?? null);
+
+    this.db.prepare(`
+      INSERT INTO chat_settings (chat_id, reply_mode, custom_prompt, reply_delay_seconds)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(chat_id) DO UPDATE SET
+        reply_mode = excluded.reply_mode,
+        custom_prompt = excluded.custom_prompt,
+        reply_delay_seconds = excluded.reply_delay_seconds
+    `).run(chatId, replyMode, customPrompt, replyDelay);
+
+    return {
+      chatId,
+      replyMode: replyMode as ChatReplyMode,
+      customPrompt,
+      replyDelaySeconds: replyDelay,
+    };
+  }
+
+  getAllChatSettings(): ChatSettings[] {
+    const rows = this.db.prepare(`
+      SELECT chat_id, reply_mode, custom_prompt, reply_delay_seconds
+      FROM chat_settings
+    `).all() as Array<{
+      chat_id: string;
+      reply_mode: string;
+      custom_prompt: string | null;
+      reply_delay_seconds: number | null;
+    }>;
+
+    return rows.map((row) => ({
+      chatId: row.chat_id,
+      replyMode: row.reply_mode as ChatReplyMode,
+      customPrompt: row.custom_prompt,
+      replyDelaySeconds: row.reply_delay_seconds,
+    }));
   }
 
   close(): void {

@@ -60,7 +60,19 @@ export class MessageHandler {
     };
     this.store.addMessage(incoming.chatId, incoming.chatName, incoming.isGroup, userMessage);
 
-    if (!config.autoReplyEnabled) {
+    // Per-Chat-Einstellungen prüfen
+    const chatSettings = this.store.getChatSettings(incoming.chatId);
+    const replyMode = chatSettings?.replyMode ?? 'default';
+
+    // Entscheiden ob geantwortet werden soll
+    let shouldReply = config.autoReplyEnabled;
+    if (replyMode === 'enabled' || replyMode === 'proactive') {
+      shouldReply = true;
+    } else if (replyMode === 'disabled') {
+      shouldReply = false;
+    }
+
+    if (!shouldReply) {
       console.log('   ⏸️  Auto-Reply ist deaktiviert, überspringe.');
       return;
     }
@@ -68,8 +80,9 @@ export class MessageHandler {
     try {
       const history = this.store.getHistory(incoming.chatId, config.maxHistory);
 
-      // Tipp-Simulation
-      const typingMs = config.replyDelaySeconds * 1000;
+      // Tipp-Simulation (per-Chat override oder global)
+      const delaySeconds = chatSettings?.replyDelaySeconds ?? config.replyDelaySeconds;
+      const typingMs = delaySeconds * 1000;
       await this.wa.simulateTyping(incoming.chatId, typingMs);
 
       // Medien-Kontext für aktuelle Nachricht
@@ -82,13 +95,17 @@ export class MessageHandler {
             }
           : undefined;
 
+      // Custom-Prompt für diesen Chat (falls gesetzt)
+      const customPrompt = chatSettings?.customPrompt ?? undefined;
+
       // AI-Antwort generieren
       const reply = await this.ai.generateReply(
         incoming.chatName,
         incoming.isGroup,
         incoming.senderName,
         history,
-        currentMedia
+        currentMedia,
+        customPrompt
       );
 
       if (!reply) {

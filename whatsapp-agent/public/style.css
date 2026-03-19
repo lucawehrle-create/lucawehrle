@@ -199,6 +199,26 @@ h2 { font-size: 16px; font-weight: 600; }
   margin-bottom: 16px;
 }
 
+.chat-detail-header h3 { flex: 1; }
+
+/* Chat Settings Panel */
+.chat-settings-panel.hidden { display: none; }
+.chat-settings-panel { margin-bottom: 16px; }
+
+/* Chat Mode Badges */
+.chat-mode-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.chat-mode-badge.mode-enabled { background: var(--accent); color: #000; }
+.chat-mode-badge.mode-disabled { background: var(--red); color: #fff; }
+.chat-mode-badge.mode-proactive { background: var(--blue); color: #000; }
+
 .chat-messages {
   background: var(--bg-card);
   border: 1px solid var(--border);

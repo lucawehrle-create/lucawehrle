@@ -114,6 +114,52 @@ export class Dashboard {
       res.json(history);
     });
 
+    // Chat-Settings lesen
+    this.app.get('/api/chats/:chatId/settings', (req, res) => {
+      const store = this.getStore();
+      const settings = store.getChatSettings(req.params.chatId);
+      res.json(settings ?? {
+        chatId: req.params.chatId,
+        replyMode: 'default',
+        customPrompt: null,
+        replyDelaySeconds: null,
+      });
+    });
+
+    // Chat-Settings updaten
+    this.app.put('/api/chats/:chatId/settings', (req, res) => {
+      const body = req.body;
+      if (!body || typeof body !== 'object') {
+        res.status(400).json({ error: 'Ungültiger Request Body' });
+        return;
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (typeof body.replyMode === 'string' && ['default', 'enabled', 'disabled', 'proactive'].includes(body.replyMode)) {
+        updates.replyMode = body.replyMode;
+      }
+      if (body.customPrompt !== undefined) {
+        updates.customPrompt = typeof body.customPrompt === 'string' && body.customPrompt.trim()
+          ? body.customPrompt.slice(0, 5000)
+          : null;
+      }
+      if (body.replyDelaySeconds !== undefined) {
+        updates.replyDelaySeconds = typeof body.replyDelaySeconds === 'number'
+          ? Math.max(0, Math.min(30, body.replyDelaySeconds))
+          : null;
+      }
+
+      const store = this.getStore();
+      const settings = store.updateChatSettings(req.params.chatId, updates);
+      this.addLog({
+        type: 'system',
+        chatId: req.params.chatId,
+        text: `Chat-Einstellungen aktualisiert: ${settings.replyMode}`,
+        timestamp: Date.now(),
+      });
+      res.json(settings);
+    });
+
     // Logs
     this.app.get('/api/logs', (_req, res) => {
       res.json(this.logs.slice(-200));

@@ -1,6 +1,7 @@
 // --- State ---
 let ws = null;
 let autoScroll = true;
+let currentChatId = null;
 
 // --- DOM ---
 const $ = (sel) => document.querySelector(sel);
@@ -159,6 +160,27 @@ async function loadChats() {
     return;
   }
 
+  // Chat-Settings für alle laden
+  const settingsMap = {};
+  await Promise.all(chats.map(async (chat) => {
+    try {
+      const r = await fetch(`/api/chats/${encodeURIComponent(chat.chatId)}/settings`);
+      settingsMap[chat.chatId] = await r.json();
+    } catch { /* ignore */ }
+  }));
+
+  const modeLabels = {
+    enabled: 'An',
+    disabled: 'Aus',
+    proactive: 'Proaktiv',
+  };
+
+  const modeClasses = {
+    enabled: 'mode-enabled',
+    disabled: 'mode-disabled',
+    proactive: 'mode-proactive',
+  };
+
   list.innerHTML = chats.map(chat => {
     const lastMsg = chat.lastMessage;
     let preview = 'Keine Nachrichten';
@@ -172,10 +194,17 @@ async function loadChats() {
     const time = lastMsg
       ? new Date(lastMsg.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
       : '';
+
+    const settings = settingsMap[chat.chatId];
+    const mode = settings?.replyMode || 'default';
+    const modeBadge = mode !== 'default'
+      ? `<span class="chat-mode-badge ${modeClasses[mode] || ''}">${modeLabels[mode] || mode}</span>`
+      : '';
+
     return `
       <div class="chat-item" data-chat-id="${escapeHtml(chat.chatId)}">
         <div class="chat-item-left">
-          <span class="chat-item-name">${chat.isGroup ? '\u{1F465}' : '\u{1F464}'} ${escapeHtml(chat.chatName)}</span>
+          <span class="chat-item-name">${chat.isGroup ? '\u{1F465}' : '\u{1F464}'} ${escapeHtml(chat.chatName)} ${modeBadge}</span>
           <span class="chat-item-preview">${escapeHtml(preview)}</span>
         </div>
         <div class="chat-item-meta">
@@ -190,13 +219,49 @@ async function loadChats() {
   });
 }
 
+async function loadChatSettings(chatId) {
+  const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}/settings`);
+  const settings = await res.json();
+
+  $('#chatReplyMode').value = settings.replyMode || 'default';
+  $('#chatCustomPrompt').value = settings.customPrompt || '';
+  $('#chatReplyDelay').value = settings.replyDelaySeconds ?? '';
+}
+
+async function saveChatSettings() {
+  if (!currentChatId) return;
+
+  const delayVal = $('#chatReplyDelay').value;
+
+  const settings = {
+    replyMode: $('#chatReplyMode').value,
+    customPrompt: $('#chatCustomPrompt').value || null,
+    replyDelaySeconds: delayVal !== '' ? parseInt(delayVal, 10) : null,
+  };
+
+  await fetch(`/api/chats/${encodeURIComponent(currentChatId)}/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  });
+
+  const status = $('#chat-settings-status');
+  status.textContent = 'Gespeichert!';
+  status.classList.add('visible');
+  setTimeout(() => status.classList.remove('visible'), 2000);
+}
+
 async function openChat(chatId) {
+  currentChatId = chatId;
   const res = await fetch(`/api/chats/${encodeURIComponent(chatId)}`);
   const chat = await res.json();
 
   $('#chat-list').style.display = 'none';
   $('#chat-detail').classList.remove('hidden');
+  $('#chat-settings-panel').classList.add('hidden');
   $('#chat-detail-name').textContent = `${chat.isGroup ? '\u{1F465}' : '\u{1F464}'} ${chat.chatName}`;
+
+  loadChatSettings(chatId);
 
   const container = $('#chat-messages');
   container.innerHTML = chat.messages.map(msg => {
@@ -252,9 +317,17 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#settings-form').addEventListener('submit', saveSettings);
 
   $('#back-to-chats').addEventListener('click', () => {
+    currentChatId = null;
     $('#chat-list').style.display = '';
     $('#chat-detail').classList.add('hidden');
+    $('#chat-settings-panel').classList.add('hidden');
   });
+
+  $('#toggle-chat-settings').addEventListener('click', () => {
+    $('#chat-settings-panel').classList.toggle('hidden');
+  });
+
+  $('#save-chat-settings').addEventListener('click', saveChatSettings);
 
   $('#refresh-chats').addEventListener('click', loadChats);
 });

@@ -93,7 +93,8 @@ WICHTIG: Spiegle diesen Schreibstil exakt. Wenn der Gesprächspartner klein schr
     isGroup: boolean,
     senderName: string,
     history: ChatMessage[],
-    currentMedia?: { buffer: Buffer; mimeType: string; mediaType: string }
+    currentMedia?: { buffer: Buffer; mimeType: string; mediaType: string },
+    customPrompt?: string
   ): Promise<string> {
     const config = this.configManager.get();
 
@@ -103,7 +104,9 @@ WICHTIG: Spiegle diesen Schreibstil exakt. Wenn der Gesprächspartner klein schr
 
     const styleAnalysis = this.analyzeWritingStyle(history);
 
-    const systemPrompt = `${config.systemPrompt}
+    const basePrompt = customPrompt || config.systemPrompt;
+
+    const systemPrompt = `${basePrompt}
 
 ${contextInfo}
 
